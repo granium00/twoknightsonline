@@ -5,6 +5,7 @@ const socket = typeof io !== "undefined" ? io() : null;
 let isHost = false;
 let applyingRemoteState = false;
 let lastStateFingerprint = "";
+let lastEmitAt = 0;
 
 function shallowClone(obj) {
   return JSON.parse(JSON.stringify(obj));
@@ -117,6 +118,18 @@ function buildState() {
     castleOwnersByKey: shallowClone(castleOwnersByKey),
     castleStatsByKey: shallowClone(castleStatsByKey)
   };
+}
+
+function emitStateNow(force = false) {
+  if (!socket || !isHost || applyingRemoteState) return;
+  const now = Date.now();
+  if (!force && now - lastEmitAt < 150) return;
+  const state = buildState();
+  const fingerprint = JSON.stringify(state);
+  if (!force && fingerprint === lastStateFingerprint) return;
+  lastStateFingerprint = fingerprint;
+  lastEmitAt = now;
+  socket.emit("hostState", state);
 }
 
 function resetDynamicCells() {
@@ -478,11 +491,15 @@ function performHostAction(action) {
 if (socket) {
   socket.on("role", payload => {
     isHost = Boolean(payload?.isHost);
+    if (isHost) {
+      setTimeout(() => emitStateNow(true), 0);
+    }
   });
 
   socket.on("hostAction", action => {
     if (!isHost) return;
     performHostAction(action);
+    setTimeout(() => emitStateNow(true), 0);
   });
 
   socket.on("stateUpdate", state => {
@@ -500,13 +517,12 @@ if (socket) {
     socket.emit("clientAction", action);
   }, true);
 
-  setInterval(() => {
+  document.addEventListener("click", () => {
     if (!isHost || applyingRemoteState) return;
-    const state = buildState();
-    const fingerprint = JSON.stringify(state);
-    if (fingerprint !== lastStateFingerprint) {
-      lastStateFingerprint = fingerprint;
-      socket.emit("hostState", state);
-    }
+    setTimeout(() => emitStateNow(), 0);
+  }, true);
+
+  setInterval(() => {
+    emitStateNow();
   }, 400);
 }
