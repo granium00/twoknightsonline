@@ -1,0 +1,1 @@
+﻿from pathlib import Path\nlines=Path('game.html').read_text('utf-8').splitlines()\nfor i,line in enumerate(lines):\n    if 'goldReward' in line and 'treasure' in line:\n        for j in range(max(0,i-5), min(len(lines), i+20)):\n            print(f'{j+1}: {lines[j]}')\n        break\n

@@ -1,0 +1,10 @@
+{
+  "name": "game",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Board game prototype",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

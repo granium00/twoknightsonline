@@ -1,0 +1,518 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Прототип карты — с сеткой</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<div id="summaryBar">
+  <div class="summary-line">
+    <span>Ходов до ресурсов:</span>
+    <strong id="resourceCountdown">0</strong>
+  </div>
+</div>
+
+<div id="container">
+
+  <div id="gameRow">
+    <div class="player-slot" id="playerSlotLeft">
+      <div class="player-panel" data-player="0">
+        <div class="player-name">
+          <span class="player-color" data-color="0"></span>
+          Игрок 1
+        </div>
+      <ul class="resource-list">
+        <li class="pocket-item">
+          <div class="stat-label-group">
+            <img class="stat-icon" src="assets/icons/icon-gold.png" alt="Золото" />
+            <span>Золото:</span>
+          </div>
+          <span class="stat-value" data-stat="gold">0</span>
+        </li>
+        <li class="pocket-item">
+          <div class="stat-label-group">
+            <img class="stat-icon" src="assets/icons/icon-army.png" alt="Войска" />
+            <span>Войска:</span>
+          </div>
+          <span class="stat-value" data-stat="army">0</span>
+        </li>
+        <li class="pocket-item">
+          <div class="stat-label-group">
+            <img class="stat-icon" src="assets/icons/icon-influence.png" alt="Влияние" />
+            <span>Влияние:</span>
+          </div>
+          <span class="stat-value" data-stat="influence">0</span>
+        </li>
+        <li class="pocket-item">
+          <div class="stat-label-group">
+            <img class="stat-icon" src="assets/icons/icon-resources.png" alt="Ресурсы" />
+            <span>Ресурсы:</span>
+          </div>
+          <div class="stat-value-group">
+            <span class="stat-value" data-stat="resources">0</span>
+            <span class="income-badge">(<span data-income="resources">+0</span>/ход)</span>
+          </div>
+        </li>
+        <li class="pocket-item">
+          <div class="stat-label-group">
+            <img class="stat-icon" src="assets/icons/icon-attack.png" alt="Атака" />
+            <span>Атака:</span>
+          </div>
+          <span class="stat-value" data-stat="attack">0</span>
+        </li>
+        <li class="pocket-item">
+          <div class="stat-label-group">
+            <img class="stat-icon" src="assets/icons/barbarian_village.png" alt="Лагеря варваров" />
+            <span>Лагерей варваров:</span>
+          </div>
+          <span class="stat-value" data-stat="barbarian-kills">0</span>
+        </li>
+        <li class="stat-section">Карман</li>
+        <li>
+          <div class="stat-label-group">
+            <img class="stat-icon" src="assets/icons/icon-gold.png" alt="Золото" />
+          </div>
+          <span class="stat-value" data-stat="pocket-gold">0</span>
+        </li>
+        <li>
+          <div class="stat-label-group">
+            <img class="stat-icon" src="assets/icons/icon-army.png" alt="Войска" />
+          </div>
+          <span class="stat-value" data-stat="pocket-army">0</span>
+        </li>
+        <li>
+          <div class="stat-label-group">
+            <img class="stat-icon" src="assets/icons/icon-resources.png" alt="Ресурсы" />
+          </div>
+          <span class="stat-value" data-stat="pocket-resources">0</span>
+        </li>
+      </ul>
+      <div class="inventory-panel" data-inventory="0">
+        <div class="inventory-title">Инвентарь</div>
+        <div class="inventory-items"></div>
+      </div>
+      </div>
+      <div class="info-card" id="leftStatus">
+        <div class="info-row">
+          <span>Ресурсы обновятся через</span>
+          <strong id="resourceCountdownLeft">0</strong>
+        </div>
+        <div class="info-row">
+          <span id="treasureState">Сокровище неактивно</span>
+        </div>
+      </div>
+      </div>
+
+    <div id="game"></div>
+
+    <div class="player-slot" id="playerSlotRight">
+      <div class="player-panel" data-player="1">
+        <div class="player-name">
+          <span class="player-color" data-color="1"></span>
+          Игрок 2
+        </div>
+      <ul class="resource-list">
+        <li class="pocket-item">
+          <div class="stat-label-group">
+            <img class="stat-icon" src="assets/icons/icon-gold.png" alt="Золото" />
+            <span>Золото:</span>
+          </div>
+          <span class="stat-value" data-stat="gold">0</span>
+        </li>
+        <li class="pocket-item">
+          <div class="stat-label-group">
+            <img class="stat-icon" src="assets/icons/icon-army.png" alt="Войска" />
+            <span>Войска:</span>
+          </div>
+          <span class="stat-value" data-stat="army">0</span>
+        </li>
+        <li class="pocket-item">
+          <div class="stat-label-group">
+            <img class="stat-icon" src="assets/icons/icon-influence.png" alt="Влияние" />
+            <span>Влияние:</span>
+          </div>
+          <span class="stat-value" data-stat="influence">0</span>
+        </li>
+        <li class="pocket-item">
+          <div class="stat-label-group">
+            <img class="stat-icon" src="assets/icons/icon-resources.png" alt="Ресурсы" />
+            <span>Ресурсы:</span>
+          </div>
+          <div class="stat-value-group">
+            <span class="stat-value" data-stat="resources">0</span>
+            <span class="income-badge">(<span data-income="resources">+0</span>/ход)</span>
+          </div>
+        </li>
+        <li class="pocket-item">
+          <div class="stat-label-group">
+            <img class="stat-icon" src="assets/icons/icon-attack.png" alt="Атака" />
+            <span>Атака:</span>
+          </div>
+          <span class="stat-value" data-stat="attack">0</span>
+        </li>
+        <li class="pocket-item">
+          <div class="stat-label-group">
+            <img class="stat-icon" src="assets/icons/barbarian_village.png" alt="Лагеря варваров" />
+            <span>Лагерей варваров:</span>
+          </div>
+          <span class="stat-value" data-stat="barbarian-kills">0</span>
+        </li>
+        <li class="stat-section">Карман</li>
+        <li>
+          <div class="stat-label-group">
+            <img class="stat-icon" src="assets/icons/icon-gold.png" alt="Золото" />
+          </div>
+          <span class="stat-value" data-stat="pocket-gold">0</span>
+        </li>
+        <li>
+          <div class="stat-label-group">
+            <img class="stat-icon" src="assets/icons/icon-army.png" alt="Войска" />
+          </div>
+          <span class="stat-value" data-stat="pocket-army">0</span>
+        </li>
+        <li>
+          <div class="stat-label-group">
+            <img class="stat-icon" src="assets/icons/icon-resources.png" alt="Ресурсы" />
+          </div>
+          <span class="stat-value" data-stat="pocket-resources">0</span>
+        </li>
+      </ul>
+      <div class="inventory-panel" data-inventory="1">
+        <div class="inventory-title">Инвентарь</div>
+        <div class="inventory-items"></div>
+      </div>
+      </div>
+      <div class="info-card" id="rightStatus">
+        <div class="info-row">
+          <span>Ресурсы обновятся через</span>
+          <strong id="resourceCountdownRight">0</strong>
+        </div>
+        <div class="info-row">
+          <span id="treasureStateRight">Сокровище неактивно</span>
+        </div>
+      </div>
+      <div id="controls">
+        <button id="rollBtn">Бросить кубики</button>
+        <div id="turnInfo">Ход: Игрок 1</div>
+        <div id="rollInfo">Бросок: -</div>
+        <div id="movesInfo">Ходов осталось: 0</div>
+        <div id="doubleMsg">ДУБЛЬ! Еще один бросок</div>
+        <div id="currentPlayerBanner">
+          <span>ХОДИТ</span>
+          <span id="currentPlayerName">ИГРОК 1</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div id="pickupToast">
+  <div class="toast-card" id="pickupText"></div>
+</div>
+
+<div id="doubleToast">
+  <div class="double-toast-text">ДУБЛЬ!</div>
+</div>
+
+<audio id="doubleSound" src="assets/sfx/double.mp3" preload="auto"></audio>
+
+<div id="turnCounter">СЧЁТЧИК ХОДОВ: 0</div>
+<div id="gameTimer">ВРЕМЯ: 00:00</div>
+<button id="newGameBtn">Новая игра</button>
+<div id="devMiniPanel">
+  <div class="dev-title">Окно разработчика</div>
+  <div class="dev-row">
+    <label>Номер хода
+      <input id="devTurnInput" type="number" min="0" value="0" />
+    </label>
+    <button id="devTurnApply" type="button">Установить</button>
+  </div>
+  <div class="dev-row">
+    <label>Промотать ходов
+      <input id="devSkipInput" type="number" min="1" value="1" />
+    </label>
+    <button id="devSkipApply" type="button">Промотать</button>
+    <button id="devStepBtn" type="button">+1 ход</button>
+  </div>
+  <div class="dev-row">
+    <button id="testModeBtn" type="button">Тестовый режим</button>
+  </div>
+</div>
+
+<div id="barracksModal">
+  <div class="barracks-card">
+    <h2 class="barracks-title">КАЗАРМА</h2>
+    <ul class="barracks-list">
+      <li><button type="button" class="trade-btn" data-buy="army-50"><span class="trade-main">Покупка: 50 войск</span><span class="trade-price"><img class="price-icon" src="assets/icons/icon-gold.png" alt="Золото" />Цена: 2000 золота</span></button></li>
+      <li><button type="button" class="trade-btn" data-buy="army-130"><span class="trade-main">Покупка: 130 войск</span><span class="trade-price"><img class="price-icon" src="assets/icons/icon-gold.png" alt="Золото" />Цена: 4000 золота</span></button></li>
+      <li><button type="button" class="trade-btn" data-buy="army-100-infl"><span class="trade-main">Покупка: 300 влияния</span><span class="trade-price"><img class="price-icon" src="assets/icons/icon-army.png" alt="Войска" />Цена: 100 войск</span></button></li>
+    </ul>
+    <button type="button" class="barracks-close" id="barracksClose">Закрыть</button>
+  </div>
+</div>
+
+<div id="lavkaModal">
+  <div class="barracks-card">
+    <h2 class="barracks-title">ЛАВКА</h2>
+    <ul class="barracks-list">
+      <li><button type="button" class="trade-btn" data-lavka-buy="res-50"><span class="trade-main">Покупка: 50 ресурсов</span><span class="trade-price"><img class="price-icon" src="assets/icons/icon-gold.png" alt="Золото" />Цена: 800 золота</span></button></li>
+      <li><button type="button" class="trade-btn" data-lavka-buy="res-100"><span class="trade-main">Покупка: 100 ресурсов</span><span class="trade-price"><img class="price-icon" src="assets/icons/icon-gold.png" alt="Золото" />Цена: 1200 золота</span></button></li>
+      <li><button type="button" class="trade-btn" data-lavka-buy="res-1000-infl"><span class="trade-main">Покупка: 300 влияния</span><span class="trade-price"><img class="price-icon" src="assets/icons/icon-resources.png" alt="Ресурсы" />Цена: 1000 ресурсов</span></button></li>
+    </ul>
+    <button type="button" class="barracks-close" id="lavkaClose">Закрыть</button>
+  </div>
+</div>
+
+<div id="workshopModal">
+  <div class="barracks-card">
+    <h2 class="barracks-title">МАСТЕРСКАЯ</h2>
+    <ul class="barracks-list">
+      <li><button type="button" class="trade-btn" data-workshop-buy="armor"><span class="trade-main">Покупка: Доспехи (+7 атаки)</span><span class="trade-price"><img class="price-icon" src="assets/icons/icon-gold.png" alt="Золото" />Цена: 1500 золота</span></button></li>
+      <li><button type="button" class="trade-btn" data-workshop-buy="sword"><span class="trade-main">Покупка: Меч (+12 атаки)</span><span class="trade-price"><img class="price-icon" src="assets/icons/icon-gold.png" alt="Золото" />Цена: 2500 золота</span></button></li>
+      <li><button type="button" class="trade-btn" data-workshop-buy="hero-sword"><span class="trade-main">Покупка: Меч героя</span><span class="trade-price"><img class="price-icon" src="assets/icons/icon-gold.png" alt="Золото" />Цена: 5000 золота + <img class="price-icon" src="assets/icons/rainbow_stone.png" alt="Радужный камень" />Радужный камень + <img class="price-icon" src="assets/icons/hero_hilt.png" alt="Рукоять" />Рукоять</span></button></li>
+      <li><button type="button" class="trade-btn" data-workshop-buy="rainbow-infl"><span class="trade-main">Покупка: 300 влияния</span><span class="trade-price"><img class="price-icon" src="assets/icons/rainbow_stone.png" alt="Радужный камень" />Цена: Радужный камень</span></button></li>
+    </ul>
+    <button type="button" class="barracks-close" id="workshopClose">Закрыть</button>
+  </div>
+</div>
+
+<div id="hireModal">
+  <div class="barracks-card">
+    <h2 class="barracks-title">НАЕМНИКИ</h2>
+    <p>Выберите цель атаки на клетку ресурсов соперника.</p>
+    <ul class="barracks-list">
+      <li><button type="button" class="trade-btn" data-hire="lumber"><span class="trade-main">Покупка: Атака Лесопилки</span><span class="trade-price"><img class="price-icon" src="assets/icons/icon-gold.png" alt="Золото" />Цена: 500 золота</span></button></li>
+      <li><button type="button" class="trade-btn" data-hire="mine"><span class="trade-main">Покупка: Атака Шахты</span><span class="trade-price"><img class="price-icon" src="assets/icons/icon-gold.png" alt="Золото" />Цена: 750 золота</span></button></li>
+      <li><button type="button" class="trade-btn" data-hire="clay"><span class="trade-main">Покупка: Атака Глиняного карьера</span><span class="trade-price"><img class="price-icon" src="assets/icons/icon-gold.png" alt="Золото" />Цена: 1200 золота</span></button></li>
+    </ul>
+    <button type="button" class="barracks-close" id="hireClose">Закрыть</button>
+  </div>
+</div>
+
+<div id="repairModal">
+  <div class="barracks-card">
+    <h2 class="barracks-title">Починка ресурса</h2>
+    <p id="repairText">Починить ресурс?</p>
+    <ul class="barracks-list">
+      <li><button type="button" class="trade-btn" id="repairConfirm"><span class="trade-main">Покупка: Починка</span><span class="trade-price"><img class="price-icon" src="assets/icons/icon-resources.png" alt="Ресурсы" />Цена: см. выше</span></button></li>
+    </ul>
+    <button type="button" class="barracks-close" id="repairCancel">Отмена</button>
+  </div>
+</div>
+
+<div id="gameOverModal">
+  <div class="game-over-card">
+    <h2 id="gameOverText">Победил Игрок</h2>
+  </div>
+</div>
+
+<div id="guardModal">
+  <div class="guard-card">
+    <h3>Страж закрывает путь</h3>
+    <p>Можно дать взятку 500 золота или заплатить влиянием (300) — при этом влияние не списывается. Без этого пройти нельзя.</p>
+    <div class="guard-actions">
+      <button id="guardBribeBtn">Дать взятку — 500 золота</button>
+      <button id="guardInfluenceBtn">Заплатить влиянием — 300 (не списывается)</button>
+      <button id="guardPassBtn">Пройти свободно</button>
+    </div>
+    <button id="guardModalCancel">Отмена</button>
+  </div>
+</div>
+
+<div id="robberModal">
+  <div class="guard-card">
+    <h3>На вас напали разбойники!</h3>
+    <p id="robberModalText">
+      Разбойников: <span id="robberCount">0</span> войск.
+      Откуп: <strong><span id="robberBribeInfo">0</span></strong> золота.
+    </p>
+    <div class="guard-actions">
+      <button id="robberFightBtn">Сразиться</button>
+      <button id="robberBribeBtn">Откупиться</button>
+    </div>
+  </div>
+</div>
+
+<div id="battleModal">
+  <div class="battle-card">
+    <h3>ИТОГИ БОЯ</h3>
+    <div id="battleSummary"></div>
+    <button id="battleClose">Закрыть</button>
+  </div>
+</div>
+
+<div id="cityModal">
+  <div class="barracks-card">
+    <h2 class="barracks-title">ЗАДАНИЯ ГОРОДА</h2>
+    <p id="cityKillsInfo">Убито лагерей варваров: 0</p>
+    <ul class="barracks-list">
+      <li><button type="button" class="trade-btn" data-city-reward="5"><span class="trade-main">Покупка: 1500 золота</span><span class="trade-price"><img class="price-icon" src="assets/icons/barbarian_village.png" alt="Лагеря" />Цена: 5 лагерей</span></button></li>
+      <li><button type="button" class="trade-btn" data-city-reward="10"><span class="trade-main">Покупка: 3000 золота</span><span class="trade-price"><img class="price-icon" src="assets/icons/barbarian_village.png" alt="Лагеря" />Цена: 10 лагерей</span></button></li>
+      <li><button type="button" class="trade-btn" data-city-reward="20"><span class="trade-main">Покупка: 5000 золота</span><span class="trade-price"><img class="price-icon" src="assets/icons/barbarian_village.png" alt="Лагеря" />Цена: 20 лагерей</span></button></li>
+    </ul>
+    <h3 style="margin:16px 0 8px 0;">Обмен</h3>
+    <ul class="barracks-list">
+      <li><button type="button" class="trade-btn" data-city-exchange="100"><span class="trade-main">Покупка: 100 влияния</span><span class="trade-price"><img class="price-icon" src="assets/icons/icon-gold.png" alt="Золото" />Цена: 1000 золота</span></button></li>
+      <li><button type="button" class="trade-btn" data-city-exchange="300"><span class="trade-main">Покупка: 300 влияния</span><span class="trade-price"><img class="price-icon" src="assets/icons/icon-gold.png" alt="Золото" />Цена: 2500 золота</span></button></li>
+    </ul>
+    <button type="button" data-city-poison="apply-poison" class="barracks-close">Применить яд на короля</button>
+    <button type="button" class="barracks-close" id="cityClose">Закрыть</button>
+  </div>
+</div>
+
+<div id="mageModal">
+  <div class="mage-card">
+    <h2 class="barracks-title">МАГ</h2>
+    <p>
+      Маг предлагает заклинания и артефакт. Выберите эффект, оплатите и маг сразу применит его — клетка остаётся до конца своего таймера.
+    </p>
+    <div class="mage-actions">
+      <button type="button" class="trade-btn" data-mage-action="slow"><span class="trade-main">Покупка: Замедление врага (25 ходов)</span><span class="trade-price"><img class="price-icon" src="assets/icons/icon-gold.png" alt="Золото" />Цена: 500 золота</span></button>
+      <button type="button" class="trade-btn" data-mage-action="no-double"><span class="trade-main">Покупка: Отмена дубля врага (25 ходов)</span><span class="trade-price"><img class="price-icon" src="assets/icons/icon-gold.png" alt="Золото" />Цена: 500 золота</span></button>
+      <button type="button" class="trade-btn" data-mage-action="poison"><span class="trade-main">Покупка: Яд</span><span class="trade-price"><img class="price-icon" src="assets/icons/icon-gold.png" alt="Золото" />Цена: 7500 золота + <img class="price-icon" src="assets/icons/mystic_flower.png" alt="Таинственный цветок" />Таинственный цветок</span></button>
+      <button type="button" class="trade-btn" data-mage-action="flower-infl"><span class="trade-main">Покупка: 300 влияния</span><span class="trade-price"><img class="price-icon" src="assets/icons/mystic_flower.png" alt="Таинственный цветок" />Цена: Таинственный цветок</span></button>
+      <button type="button" class="trade-btn" data-mage-action="flower-gold"><span class="trade-main">Покупка: 1000 золота</span><span class="trade-price"><img class="price-icon" src="assets/icons/mystic_flower.png" alt="Таинственный цветок" />Цена: Таинственный цветок</span></button>
+    </div>
+    <button type="button" class="barracks-close" id="mageCancelBtn">Закрыть</button>
+  </div>
+</div>
+
+<div id="stoneModal">
+  <div class="guard-card">
+    <h3>Необычный камень</h3>
+    <p>Вы обнаружили необычный камень...</p>
+    <div class="guard-actions">
+      <button id="stoneTouchBtn">Коснуться камня</button>
+      <button id="stoneCloseBtn">Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<div id="stoneResultModal">
+  <div class="guard-card">
+    <h3>Эффект камня</h3>
+    <p id="stoneResultText"></p>
+    <div class="guard-actions">
+      <button id="stoneResultClose">Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<div id="trollCaveModal">
+  <div class="guard-card">
+    <h3>Пещера троллей</h3>
+    <p id="trollCaveText"></p>
+    <div class="guard-actions">
+      <button id="trollCaveClose">Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<div id="masterModal">
+  <div class="guard-card">
+    <h3>Великий Мастер</h3>
+    <p>Мастер может изготовить рукоять меча героя.</p>
+    <div class="guard-actions">
+      <button id="masterBuyHilt" class="trade-btn"><span class="trade-main">Покупка: Рукоять меча героя</span><span class="trade-price"><img class="price-icon" src="assets/icons/icon-resources.png" alt="Ресурсы" />Цена: 1500 ресурсов</span></button>
+      <button id="masterBuyGold" class="trade-btn"><span class="trade-main">Покупка: 1500 золота</span><span class="trade-price"><img class="price-icon" src="assets/icons/icon-resources.png" alt="Ресурсы" />Цена: 800 ресурсов</span></button>
+      <button id="masterBuyTerrorRing" class="trade-btn"><span class="trade-main">Покупка: Кольцо ужаса</span><span class="trade-price"><img class="price-icon" src="assets/icons/ring_persuasion.png" alt="Кольцо убеждения" />Цена: Кольцо убеждения</span></button>
+      <button id="masterCloseBtn">Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<div id="castleModal">
+  <div class="castle-card">
+    <h3>Замок</h3>
+    <div class="castle-level-row">
+      <div>Ур. </div><div id="castleLevelValue">1</div>
+    </div>
+    <div class="castle-badges">
+      <div id="castleWallBadge" class="castle-pill">Стена</div>
+    </div>
+    <div id="castleArmorValue" class="castle-stat">Броня: 200</div>
+    <div id="castleHealthValue" class="castle-stat">Здоровье: 150</div>
+    <div class="castle-stat" id="castleNextBonus">Следующий уровень: +0 брони, +0 здоровья</div>
+    <p>Увеличьте уровень замка за <span id="castleUpgradeCost">500</span> ресурсов.</p>
+    <button id="castleUpgradeBtn">Улучшить замок</button>
+    <div class="castle-features">
+      <div class="castle-feature-row">
+        <div>
+          <strong>Стена</strong>
+          <div class="castle-feature-sub">+50 брони</div>
+        </div>
+        <div class="castle-feature-actions">
+          <button data-castle-feature="wall" class="castle-buy-btn"><span>300</span><img class="price-icon" src="assets/icons/icon-resources.png" alt="Ресурсы" /></button>
+          <div class="castle-feature-status" data-feature-status="wall"></div>
+        </div>
+      </div>
+      <div class="castle-feature-row">
+        <div>
+          <strong>Лесопилка</strong>
+          <div class="castle-feature-sub">+3 ресурсов за ход</div>
+        </div>
+        <div class="castle-feature-actions">
+          <button data-castle-feature="lumber" class="castle-buy-btn"><span>50</span><img class="price-icon" src="assets/icons/icon-resources.png" alt="Ресурсы" /></button>
+          <div class="castle-feature-status" data-feature-status="lumber"></div>
+        </div>
+      </div>
+      <div class="castle-feature-row">
+        <div>
+          <strong>Шахта</strong>
+          <div class="castle-feature-sub">+10 ресурсов за ход</div>
+        </div>
+        <div class="castle-feature-actions">
+          <button data-castle-feature="mine" class="castle-buy-btn"><span>200</span><img class="price-icon" src="assets/icons/icon-resources.png" alt="Ресурсы" /></button>
+          <div class="castle-feature-status" data-feature-status="mine"></div>
+        </div>
+      </div>
+      <div class="castle-feature-row">
+        <div>
+          <strong>Глиняный карьер</strong>
+          <div class="castle-feature-sub">+15 ресурсов за ход</div>
+        </div>
+        <div class="castle-feature-actions">
+          <button data-castle-feature="clay" class="castle-buy-btn"><span>400</span><img class="price-icon" src="assets/icons/icon-resources.png" alt="Ресурсы" /></button>
+          <div class="castle-feature-status" data-feature-status="clay"></div>
+        </div>
+      </div>
+    </div>
+    <div class="castle-storage">
+      <div class="castle-storage-row">
+        <span>Войска в замке:</span>
+        <strong data-castle-storage="0">0</strong>
+      </div>
+      <div class="castle-storage-row">
+        <label>
+          <span>Положить в замок:</span>
+          <input type="number" id="castleDepositInput" min="0" step="1" value="0" />
+        </label>
+        <button id="castleDepositBtn">Перенести</button>
+      </div>
+      <div class="castle-storage-row castle-withdraw">
+        <label>
+          <span>Взять из замка:</span>
+          <input type="number" id="castleWithdrawInput" min="0" step="1" value="0" />
+        </label>
+        <button id="castleWithdrawBtn">Перенести</button>
+      </div>
+      <div class="castle-withdraw-status">
+        Доступно для снятия: <span data-castle-army>0</span> войск.
+      </div>
+    </div>
+    <button id="castleModalClose" class="castle-close">Закрыть</button>
+  </div>
+</div>
+
+<script src="js/01_settings.js"></script>
+<script src="js/02_important_nodes.js"></script>
+<script src="js/03_grid.js"></script>
+<script src="js/04_cells_and_resources.js"></script>
+<script src="js/05_pawns_and_ui.js"></script>
+<script src="js/06_movement_and_turns.js"></script>
+</body>
+</html>
