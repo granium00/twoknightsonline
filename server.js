@@ -1,6 +1,7 @@
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
+const { Server } = require("socket.io");
 
 const PORT = process.env.PORT || 3000;
 const ROOT = __dirname;
@@ -29,6 +30,9 @@ function safePath(urlPath) {
 }
 
 const server = http.createServer((req, res) => {
+  if (req.url && req.url.startsWith("/socket.io/")) {
+    return;
+  }
   const urlPath = req.url === "/" ? "/index.html" : req.url;
   const filePath = safePath(urlPath);
   if (!filePath) {
@@ -47,6 +51,45 @@ const server = http.createServer((req, res) => {
     const type = MIME_TYPES[ext] || "application/octet-stream";
     res.writeHead(200, { "Content-Type": type });
     fs.createReadStream(filePath).pipe(res);
+  });
+});
+
+const io = new Server(server, {
+  cors: { origin: "*" }
+});
+
+let hostId = null;
+let latestState = null;
+
+io.on("connection", socket => {
+  const isHost = !hostId;
+  if (isHost) hostId = socket.id;
+  socket.emit("role", { isHost });
+
+  if (latestState) {
+    socket.emit("stateUpdate", latestState);
+  }
+
+  socket.on("clientAction", action => {
+    if (hostId) {
+      io.to(hostId).emit("hostAction", action);
+    }
+  });
+
+  socket.on("hostState", state => {
+    latestState = state;
+    socket.broadcast.emit("stateUpdate", state);
+  });
+
+  socket.on("disconnect", () => {
+    if (socket.id === hostId) {
+      hostId = null;
+      const ids = Array.from(io.sockets.sockets.keys());
+      if (ids.length > 0) {
+        hostId = ids[0];
+        io.to(hostId).emit("role", { isHost: true });
+      }
+    }
   });
 });
 
