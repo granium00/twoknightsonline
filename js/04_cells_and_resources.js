@@ -273,8 +273,8 @@ const MAGE_POSITIONS = [
   { x: 8, y: 5 },  // 09:06
   { x: 28, y: 17 } // 29:18
 ];
-const MAGE_MIN_DURATION = 5;
-const MAGE_MAX_DURATION = 7;
+const MAGE_MIN_DURATION = 7;
+const MAGE_MAX_DURATION = 9;
 const MAGE_MIN_COOLDOWN = 15;
 const MAGE_MAX_COOLDOWN = 20;
 const mageSlot = {
@@ -287,7 +287,8 @@ const mageSlot = {
   x: null,
   y: null,
   timerElem: null,
-  nextSpawnTurn: 20
+  nextSpawnTurn: 20,
+  nextSpawnIndex: null
 };
 const TROLL_CAVES = [
   { x: 0, y: 11, key: "0,11", looted: false }, // 01:12
@@ -1268,7 +1269,10 @@ function updateMageTimer(slot) {
 
 function spawnMageCell(slot) {
   if (!slot || slot.active) return false;
-  const pick = MAGE_POSITIONS[Math.floor(Math.random() * MAGE_POSITIONS.length)];
+  if (slot.nextSpawnIndex === null) {
+    slot.nextSpawnIndex = Math.floor(Math.random() * MAGE_POSITIONS.length);
+  }
+  const pick = MAGE_POSITIONS[slot.nextSpawnIndex];
   const success = setSpecialCell(
     pick.x,
     pick.y,
@@ -1280,6 +1284,7 @@ function spawnMageCell(slot) {
     { type: "mage", mageId: slot.id }
   );
   if (!success) return false;
+  slot.nextSpawnIndex = (slot.nextSpawnIndex + 1) % MAGE_POSITIONS.length;
   const key = `${pick.x},${pick.y}`;
   const cell = grid[key];
   if (cell) {

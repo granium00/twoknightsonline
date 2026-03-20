@@ -2108,7 +2108,7 @@ function resolveDragonBattle(playerIndex, dragonArmy = 75) {
   };
 }
 
-function resolveBattle(attackerIndex, defenderIndex) {
+function resolveBattle(attackerIndex, defenderIndex, options = {}) {
   const attacker = players[attackerIndex];
   const defender = players[defenderIndex];
   const initialDefArmy = Math.max(0, defender.pocket.army);
@@ -2145,8 +2145,11 @@ function resolveBattle(attackerIndex, defenderIndex) {
   if (defenderRemaining > attackerRemaining) {
     winnerIndex = defenderIndex;
   }
-  const loserIndex = winnerIndex === attackerIndex ? defenderIndex : attackerIndex;
-  const stolen = stealResources(winnerIndex, loserIndex);
+  let stolen = null;
+  if (!options.noSteal) {
+    const loserIndex = winnerIndex === attackerIndex ? defenderIndex : attackerIndex;
+    stolen = stealResources(winnerIndex, loserIndex);
+  }
 
   return {
     attackerName: attacker.name,
@@ -2651,6 +2654,27 @@ let doubleSound = null;
 let audioUnlocked = false;
 let testModeEnabled = false;
 
+function tickAllTimedBuffs() {
+  players.forEach(player => {
+    if (!player) return;
+    if (player.slowTurnsRemaining > 0) {
+      player.slowTurnsRemaining = Math.max(0, player.slowTurnsRemaining - 1);
+    }
+    if (player.noDoubleTurnsRemaining > 0) {
+      player.noDoubleTurnsRemaining = Math.max(0, player.noDoubleTurnsRemaining - 1);
+    }
+    if (player.stunnedTurnsRemaining > 0) {
+      player.stunnedTurnsRemaining = Math.max(0, player.stunnedTurnsRemaining - 1);
+    }
+    if (player.invisTurnsRemaining > 0) {
+      player.invisTurnsRemaining = Math.max(0, player.invisTurnsRemaining - 1);
+    }
+    if (player.luckTurnsRemaining > 0) {
+      player.luckTurnsRemaining = Math.max(0, player.luckTurnsRemaining - 1);
+    }
+  });
+}
+
 function unlockAudio() {
   if (audioUnlocked) return;
   audioUnlocked = true;
@@ -2962,6 +2986,7 @@ function updateTurnUI() {
 }
 
 function endTurn() {
+  tickAllTimedBuffs();
   collectCastleIncomes(currentPlayerIndex);
   turnCounter += 1;
   handleMageCellTimers();
@@ -3026,6 +3051,7 @@ function endTurn() {
   extraTurnReason = null;
 
   updateTurnUI();
+  players.forEach((_, idx) => updatePlayerResources(idx));
   scheduleAutoRoll();
 }
 
@@ -3060,16 +3086,7 @@ function doRoll() {
   lastDie1 = die1;
   lastDie2 = die2;
   const currentPlayer = players[currentPlayerIndex];
-  if (currentPlayer) {
-    if (currentPlayer.invisTurnsRemaining > 0) {
-      currentPlayer.invisTurnsRemaining = Math.max(0, currentPlayer.invisTurnsRemaining - 1);
-    }
-    if (currentPlayer.luckTurnsRemaining > 0) {
-      currentPlayer.luckTurnsRemaining = Math.max(0, currentPlayer.luckTurnsRemaining - 1);
-    }
-  }
   if (currentPlayer && currentPlayer.stunnedTurnsRemaining > 0) {
-    currentPlayer.stunnedTurnsRemaining = Math.max(0, currentPlayer.stunnedTurnsRemaining - 1);
     showPickupToast("Тролли оглушили вас — пропуск хода.");
     movesRemaining = 0;
     lastRoll = null;
@@ -3078,8 +3095,10 @@ function doRoll() {
     extraTurnPending = false;
     extraTurnReason = null;
     justRolledDouble = false;
+    tickAllTimedBuffs();
     currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
     updateTurnUI();
+    players.forEach((_, idx) => updatePlayerResources(idx));
     scheduleAutoRoll();
     return;
   }
@@ -3095,7 +3114,6 @@ function doRoll() {
   let effectiveMoves = roll;
   if (penalty > 0 && currentPlayer) {
     effectiveMoves = Math.max(0, roll - penalty);
-    currentPlayer.slowTurnsRemaining = Math.max(0, currentPlayer.slowTurnsRemaining - 1);
   }
   const rolledDouble = die1 === die2;
   justRolledDouble = false;
@@ -3107,7 +3125,6 @@ function doRoll() {
   if (!stoneBonusActive && currentPlayer && currentPlayer.noDoubleTurnsRemaining > 0 && rolledDouble) {
     extraTurn = false;
     extraTurnReason = null;
-    currentPlayer.noDoubleTurnsRemaining = Math.max(0, currentPlayer.noDoubleTurnsRemaining - 1);
   }
   extraTurnPending = extraTurn;
   if (rolledDouble) {

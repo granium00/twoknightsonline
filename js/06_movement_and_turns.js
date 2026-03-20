@@ -77,8 +77,25 @@ game.addEventListener("click", e => {
       showPickupToast("В кармане нет войск для боя.");
       return;
     }
-    const battleResult = resolveBattle(currentPlayerIndex, defenderIndex);
-    finalizeMove(gridX, gridY);
+    const castleKey = getCastleBaseKeyForPos(gridX, gridY) || key;
+    const node = nodeByPos[castleKey];
+    const defenderOwnsCastle =
+      node &&
+      node.type === "castle" &&
+      typeof castleOwnersByKey !== "undefined" &&
+      castleOwnersByKey[castleKey] === defenderIndex;
+    const battleResult = resolveBattle(currentPlayerIndex, defenderIndex, { noSteal: defenderOwnsCastle });
+    const attackerWon = battleResult && battleResult.winnerIndex === currentPlayerIndex;
+    if (defenderOwnsCastle && attackerWon) {
+      showPickupToast("Победа над игроком. Начинается штурм замка.");
+      finalizeMove(gridX, gridY);
+      return;
+    }
+    if (attackerWon) {
+      finalizeMove(gridX, gridY);
+    } else {
+      endTurn();
+    }
     showBattleModal(battleResult);
     return;
   }
