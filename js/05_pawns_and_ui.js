@@ -994,7 +994,7 @@ function openBarracks(playerIndex) {
     const type = btn.getAttribute("data-buy");
     if (type === "army-50") btn.disabled = gold < cost50;
     if (type === "army-130") btn.disabled = gold < cost130;
-    if (type === "army-100-infl") btn.disabled = player.pocket.army < 65;
+    if (type === "army-100-infl") btn.disabled = player.pocket.army < 100;
     if (type === "army-50") setTradePrice(btn, goldPriceHtml(cost50));
     if (type === "army-130") setTradePrice(btn, goldPriceHtml(cost130));
   });
@@ -1031,11 +1031,11 @@ barracksButtons.forEach(btn => {
       flashPrice(btn, cost, "assets/icons/icon-gold.png", "Золото");
     }
     if (type === "army-100-infl") {
-      if (player.pocket.army < 65) return;
-      player.pocket.army -= 65;
+      if (player.pocket.army < 100) return;
+      player.pocket.army -= 100;
       player.resources.influence += 300;
       showPickupToast("Получено 300 влияния.");
-      flashPrice(btn, 65, "assets/icons/icon-army.png", "Войска");
+      flashPrice(btn, 100, "assets/icons/icon-army.png", "Войска");
     }
     updatePlayerResources(barracksPlayerIndex);
     openBarracks(barracksPlayerIndex);
@@ -1952,11 +1952,9 @@ function resolveTrollBattle(playerIndex, trollArmy) {
     winnerIndex = null;
   }
   const playerWon = winnerIndex === playerIndex;
-  let trollClubAwarded = false;
-  if (playerWon) {
+  if (playerWon && Math.random() < 0.3) {
     player.trollClubCount = (player.trollClubCount || 0) + 1;
     player.attack += 25;
-    trollClubAwarded = true;
     showPickupToast("Вы получили Дубинку троллей: +25 атаки.");
   }
   updatePlayerResources(playerIndex);
@@ -1970,8 +1968,7 @@ function resolveTrollBattle(playerIndex, trollArmy) {
     defenderRemaining,
     winnerName,
     winnerIndex,
-    defenderInitial: initialDefArmy,
-    trollClubAwarded
+    defenderInitial: initialDefArmy
   };
 }
 
@@ -2342,7 +2339,6 @@ function buildBattleSummaryLines(result) {
         `\u0422\u0440\u043e\u043b\u043b\u0438: \u0418\u0437\u043d\u0430\u0447\u0430\u043b\u044c\u043d\u043e ${result.defenderInitial} \u0432\u043e\u0439\u0441\u043a`,
         "\u00A0",
         `\u041f\u043e\u0431\u0435\u0434\u0438\u0442\u0435\u043b\u044c : ${result.winnerName}`
-        , (result.trollClubAwarded ? '\u041f\u043e\u043b\u0443\u0447\u0435\u043d\u043e: \u0414\u0443\u0431\u0438\u043d\u043a\u0430 \u0442\u0440\u043e\u043b\u043b\u0435\u0439 (+25 \u0430\u0442\u0430\u043a\u0438)' : null)
       ].filter(Boolean);
     }
     if (result.type === "dragon") {
@@ -2858,7 +2854,7 @@ function finalizeMove(gridX, gridY) {
     if (currentPlayer.invisTurnsRemaining > 0) {
       showPickupToast("Невидимость: тролли вас не атакуют.");
     } else {
-      const trollArmy = 60;
+      const trollArmy = Math.floor(Math.random() * 21) + 30;
       const battleResult = resolveTrollBattle(currentPlayerIndex, trollArmy);
       showBattleModal(battleResult);
       endTurn();
