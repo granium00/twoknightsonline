@@ -72,6 +72,7 @@ const trollCaveClose = document.getElementById("trollCaveClose");
 const masterModal = document.getElementById("masterModal");
 const masterBuyHilt = document.getElementById("masterBuyHilt");
 const masterBuyGold = document.getElementById("masterBuyGold");
+const masterBuyGoldRainbow = document.getElementById("masterBuyGoldRainbow");
 const masterBuyTerrorRing = document.getElementById("masterBuyTerrorRing");
 const masterCloseBtn = document.getElementById("masterCloseBtn");
 const battleModal = document.getElementById("battleModal");

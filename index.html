@@ -8,13 +8,6 @@
 </head>
 <body>
 
-<div id="summaryBar">
-  <div class="summary-line">
-    <span>Ходов до ресурсов:</span>
-    <strong id="resourceCountdown">0</strong>
-  </div>
-</div>
-
 <div id="container">
 
   <div id="gameRow">
@@ -69,6 +62,18 @@
             <span>Лагерей варваров:</span>
           </div>
           <span class="stat-value" data-stat="barbarian-kills">0</span>
+        </li>
+        <li class="pocket-item">
+          <div class="stat-label-group">
+            <span>Негативы:</span>
+          </div>
+          <span class="stat-value" data-stat="negative-buffs">нет</span>
+        </li>
+        <li class="pocket-item">
+          <div class="stat-label-group">
+            <span>Позитивы:</span>
+          </div>
+          <span class="stat-value" data-stat="positive-buffs">нет</span>
         </li>
         <li class="stat-section">Карман</li>
         <li>
@@ -159,6 +164,18 @@
             <span>Лагерей варваров:</span>
           </div>
           <span class="stat-value" data-stat="barbarian-kills">0</span>
+        </li>
+        <li class="pocket-item">
+          <div class="stat-label-group">
+            <span>Негативы:</span>
+          </div>
+          <span class="stat-value" data-stat="negative-buffs">нет</span>
+        </li>
+        <li class="pocket-item">
+          <div class="stat-label-group">
+            <span>Позитивы:</span>
+          </div>
+          <span class="stat-value" data-stat="positive-buffs">нет</span>
         </li>
         <li class="stat-section">Карман</li>
         <li>
@@ -262,6 +279,8 @@
       <li><button type="button" class="trade-btn" data-lavka-buy="res-50"><span class="trade-main">Покупка: 50 ресурсов</span><span class="trade-price"><img class="price-icon" src="assets/icons/icon-gold.png" alt="Золото" />Цена: 800 золота</span></button></li>
       <li><button type="button" class="trade-btn" data-lavka-buy="res-100"><span class="trade-main">Покупка: 100 ресурсов</span><span class="trade-price"><img class="price-icon" src="assets/icons/icon-gold.png" alt="Золото" />Цена: 1200 золота</span></button></li>
       <li><button type="button" class="trade-btn" data-lavka-buy="res-1000-infl"><span class="trade-main">Покупка: 300 влияния</span><span class="trade-price"><img class="price-icon" src="assets/icons/icon-resources.png" alt="Ресурсы" />Цена: 1000 ресурсов</span></button></li>
+      <li><button type="button" class="trade-btn" data-lavka-buy="potion-invis"><span class="trade-main">Покупка: Зелье невидимости</span><span class="trade-price"><img class="price-icon" src="assets/icons/icon-gold.png" alt="Золото" />Цена: 250 золота</span></button></li>
+      <li><button type="button" class="trade-btn" data-lavka-buy="potion-luck"><span class="trade-main">Покупка: Зелье удачи</span><span class="trade-price"><img class="price-icon" src="assets/icons/icon-gold.png" alt="Золото" />Цена: 250 золота</span></button></li>
     </ul>
     <button type="button" class="barracks-close" id="lavkaClose">Закрыть</button>
   </div>
@@ -376,6 +395,7 @@
       <button type="button" class="trade-btn" data-mage-action="poison"><span class="trade-main">Покупка: Яд</span><span class="trade-price"><img class="price-icon" src="assets/icons/icon-gold.png" alt="Золото" />Цена: 7500 золота + <img class="price-icon" src="assets/icons/mystic_flower.png" alt="Таинственный цветок" />Таинственный цветок</span></button>
       <button type="button" class="trade-btn" data-mage-action="flower-infl"><span class="trade-main">Покупка: 300 влияния</span><span class="trade-price"><img class="price-icon" src="assets/icons/mystic_flower.png" alt="Таинственный цветок" />Цена: Таинственный цветок</span></button>
       <button type="button" class="trade-btn" data-mage-action="flower-gold"><span class="trade-main">Покупка: 1000 золота</span><span class="trade-price"><img class="price-icon" src="assets/icons/mystic_flower.png" alt="Таинственный цветок" />Цена: Таинственный цветок</span></button>
+      <button type="button" class="trade-btn" data-mage-action="clover-luck"><span class="trade-main">Покупка: Зелье удачи</span><span class="trade-price"><img class="price-icon" src="assets/icons/clover.png" alt="Клевер" />Цена: Клевер</span></button>
     </div>
     <button type="button" class="barracks-close" id="mageCancelBtn">Закрыть</button>
   </div>
@@ -419,6 +439,7 @@
     <div class="guard-actions">
       <button id="masterBuyHilt" class="trade-btn"><span class="trade-main">Покупка: Рукоять меча героя</span><span class="trade-price"><img class="price-icon" src="assets/icons/icon-resources.png" alt="Ресурсы" />Цена: 1500 ресурсов</span></button>
       <button id="masterBuyGold" class="trade-btn"><span class="trade-main">Покупка: 1500 золота</span><span class="trade-price"><img class="price-icon" src="assets/icons/icon-resources.png" alt="Ресурсы" />Цена: 800 ресурсов</span></button>
+      <button id="masterBuyGoldRainbow" class="trade-btn"><span class="trade-main">Покупка: 1000 золота</span><span class="trade-price"><img class="price-icon" src="assets/icons/rainbow_stone.png" alt="Радужный камень" />Цена: Радужный камень</span></button>
       <button id="masterBuyTerrorRing" class="trade-btn"><span class="trade-main">Покупка: Кольцо ужаса</span><span class="trade-price"><img class="price-icon" src="assets/icons/ring_persuasion.png" alt="Кольцо убеждения" />Цена: Кольцо убеждения</span></button>
       <button id="masterCloseBtn">Закрыть</button>
     </div>

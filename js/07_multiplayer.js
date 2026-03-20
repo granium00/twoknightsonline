@@ -30,6 +30,12 @@ function buildState() {
       slowTurnsRemaining: p.slowTurnsRemaining,
       noDoubleTurnsRemaining: p.noDoubleTurnsRemaining,
       poisonCount: p.poisonCount,
+      invisPotionCount: p.invisPotionCount,
+      luckPotionCount: p.luckPotionCount,
+      invisTurnsRemaining: p.invisTurnsRemaining,
+      luckTurnsRemaining: p.luckTurnsRemaining,
+      cloverCount: p.cloverCount,
+      trollClubCount: p.trollClubCount,
       flowerCount: p.flowerCount,
       ringCount: p.ringCount,
       terrorRingCount: p.terrorRingCount,
@@ -85,6 +91,9 @@ function buildState() {
     })),
     treasure: treasure ? { key: treasure.key, x: treasure.x, y: treasure.y } : null,
     flowerArtifact: flowerArtifact ? { key: flowerArtifact.key, x: flowerArtifact.x, y: flowerArtifact.y } : null,
+    cloverArtifact: cloverArtifact ? { key: cloverArtifact.key, x: cloverArtifact.x, y: cloverArtifact.y } : null,
+    cloverTurnsRemaining,
+    nextCloverSpawnTurn,
     stoneByPos: Object.values(stoneByPos).map(entry => ({
       key: entry.key,
       x: entry.x,
@@ -152,6 +161,7 @@ function resetDynamicCells() {
   mercenaries.length = 0;
   treasure = null;
   flowerArtifact = null;
+  cloverArtifact = null;
   masterActive = false;
   mageSlot.active = false;
   mageSlot.key = null;
@@ -229,6 +239,18 @@ function applyFlower(entry) {
   cell.textContent = "";
   setCellIcon(cell, FLOWER_ICON.file, FLOWER_ICON.alt);
   flowerArtifact = { key, x: entry.x, y: entry.y, elem: cell };
+}
+
+function applyClover(entry) {
+  if (!entry) return;
+  const key = entry.key || `${entry.x},${entry.y}`;
+  const cell = grid[key];
+  if (!cell) return;
+  cell.classList.remove("inactive");
+  cell.classList.add("clover", "important");
+  cell.textContent = "";
+  setCellIcon(cell, "clover.png", "Клевер");
+  cloverArtifact = { key, x: entry.x, y: entry.y, elem: cell };
 }
 
 function applyStone(entry) {
@@ -358,6 +380,10 @@ function applyState(state) {
   // Treasure / artifacts
   if (state.treasure) applyTreasure(state.treasure);
   if (state.flowerArtifact) applyFlower(state.flowerArtifact);
+  if (state.cloverArtifact) applyClover(state.cloverArtifact);
+  if (state.cloverArtifact) applyClover(state.cloverArtifact);
+  cloverTurnsRemaining = state.cloverTurnsRemaining ?? cloverTurnsRemaining;
+  nextCloverSpawnTurn = state.nextCloverSpawnTurn ?? nextCloverSpawnTurn;
 
   // Stones
   (state.stoneByPos || []).forEach(applyStone);
@@ -375,7 +401,8 @@ function applyState(state) {
   // Troll
   if (state.trollState) {
     trollState = Object.assign(trollState, state.trollState);
-    if (trollState.key) ensureTrollTokenAt(trollState.x, trollState.y);
+    trollState.prevKey = null;
+    updateTrollVisual();
   }
 
   // Barbarians

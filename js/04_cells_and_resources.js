@@ -214,6 +214,12 @@ const flowerSpawnTurns = [];
 let flowerSpawnIndex = 0;
 let flowerArtifact = null;
 let flowerTurnsRemaining = 0;
+const CLOVER_SPAWN_MIN = 15;
+const CLOVER_SPAWN_MAX = 30;
+const CLOVER_DURATION = 5;
+let nextCloverSpawnTurn = null;
+let cloverArtifact = null;
+let cloverTurnsRemaining = 0;
 const STONE_FIRST_MIN_TURN = 15;
 const STONE_FIRST_MAX_TURN = 25;
 const STONE_COOLDOWN_MIN = 12;
@@ -250,6 +256,10 @@ function initStoneSpawns() {
   nextStoneSpawnTurn = randomIntRange(STONE_FIRST_MIN_TURN, STONE_FIRST_MAX_TURN);
 }
 initStoneSpawns();
+function initCloverSpawns() {
+  nextCloverSpawnTurn = randomIntRange(CLOVER_SPAWN_MIN, CLOVER_SPAWN_MAX);
+}
+initCloverSpawns();
 function initRainbowSpawns() {
   const picked = new Set();
   while (picked.size < RAINBOW_SPAWN_COUNT) {
@@ -518,7 +528,8 @@ function handleTrollsTurn() {
         player: p,
         dist: Math.abs(p.x - trollState.x) + Math.abs(p.y - trollState.y)
       }))
-      .filter(entry => entry.dist <= 6)
+      .filter(entry => entry.dist <= 5)
+      .filter(entry => (entry.player.invisTurnsRemaining || 0) <= 0)
       .sort((a, b) => a.dist - b.dist);
     if (!trollState.stunUsed && nearby.length && Math.random() < 0.5) {
       const target = nearby[0].player;
@@ -622,7 +633,7 @@ function setCellToInactive(x, y, {skipTreasureCleanup = false} = {}) {
     clearTreasure();
     return;
   }
-  cell.classList.remove("resource", "important", "owned", "reachable", "barbarian", "special", "forest", "resource-disabled", "mercenary", "mage", "flower", "stone", "rainbow-stone", "master", "troll", "troll-cave", "treasure");
+  cell.classList.remove("resource", "important", "owned", "reachable", "barbarian", "special", "forest", "resource-disabled", "mercenary", "mage", "flower", "clover", "stone", "rainbow-stone", "master", "troll", "troll-cave", "treasure");
   cell.classList.add("inactive");
   cell.textContent = "";
   clearCellIcon(cell);
@@ -709,6 +720,7 @@ function spawnResources() {
       if (nodeByPos[key]) continue;
       if (resourceByPos[key]) continue;
       if (specialByPos[key]) continue;
+      if (cloverArtifact && cloverArtifact.key === key) continue;
       if (barbarianCells.some(cell => cell.key === key)) continue;
       if (isSpawnBlocked(x, y)) continue;
       if (blockedCellKeys.has(key)) continue;
@@ -755,9 +767,10 @@ function spawnResources() {
   updateStatusPanel();
 }
 function updateStatusPanel() {
-  if (!resourceCountdown || !treasureState) return;
   const resourceValue = Math.max(0, turnsUntilResources);
-  resourceCountdown.textContent = resourceValue;
+  if (resourceCountdown) {
+    resourceCountdown.textContent = resourceValue;
+  }
   if (resourceCountdownLeft) {
 
     resourceCountdownLeft.textContent = resourceValue;
@@ -765,17 +778,19 @@ function updateStatusPanel() {
   if (resourceCountdownRight) {
     resourceCountdownRight.textContent = resourceValue;
   }
-  if (treasure) {
-    treasureState.textContent = `Сокровище активно (${treasureTurnsRemaining} ходов)`;
-  } else {
-    const treasureDelay = Math.max(0, turnsUntilTreasure);
-    treasureState.textContent =
-      treasureDelay === 0
-        ? "Сокровище появится в текущем ходе"
-        : `Сокровище появится через ${treasureDelay} ходов`;
-  }
-  if (treasureStateRight) {
-    treasureStateRight.textContent = treasureState.textContent;
+  if (treasureState || treasureStateRight) {
+    let text = "";
+    if (treasure) {
+      text = `Сокровище активно (${treasureTurnsRemaining} ходов)`;
+    } else {
+      const treasureDelay = Math.max(0, turnsUntilTreasure);
+      text =
+        treasureDelay === 0
+          ? "Сокровище появится в текущем ходе"
+          : `Сокровище появится через ${treasureDelay} ходов`;
+    }
+    if (treasureState) treasureState.textContent = text;
+    if (treasureStateRight) treasureStateRight.textContent = text;
   }
 }
 
@@ -790,6 +805,7 @@ function getAvailableBarbarianKeys() {
       if (isSpawnBlocked(x, y)) continue;
       if (blockedCellKeys.has(key)) continue;
       if (treasure && treasure.key === key) continue;
+      if (cloverArtifact && cloverArtifact.key === key) continue;
       if (barbarianCells.some(cell => cell.key === key)) continue;
       if (players.some(player => player.x === x && player.y === y)) continue;
       const cell = grid[key];
@@ -873,6 +889,7 @@ function getTreasureEligibleKeys() {
     if (specialByPos[key]) return false;
     if (stoneByPos[key]) return false;
     if (rainbowByPos[key]) return false;
+    if (cloverArtifact && cloverArtifact.key === key) return false;
     if (masterActive && key === MASTER_CELL.key) return false;
     if (playerPositions.has(key)) return false;
     if (treasure && treasure.key === key) return false;
@@ -892,6 +909,7 @@ function getFlowerEligibleKeys() {
     if (nodeByPos[key]) return false;
     if (resourceByPos[key]) return false;
     if (specialByPos[key]) return false;
+    if (cloverArtifact && cloverArtifact.key === key) return false;
     if (playerPositions.has(key)) return false;
     if (treasure && treasure.key === key) return false;
     if (flowerArtifact && flowerArtifact.key === key) return false;
@@ -911,6 +929,7 @@ function getStoneEligibleKeys() {
     if (resourceByPos[key]) return false;
     if (specialByPos[key]) return false;
     if (stoneByPos[key]) return false;
+    if (cloverArtifact && cloverArtifact.key === key) return false;
     if (playerPositions.has(key)) return false;
     if (treasure && treasure.key === key) return false;
     if (flowerArtifact && flowerArtifact.key === key) return false;
@@ -931,6 +950,7 @@ function getRainbowEligibleKeys() {
     if (specialByPos[key]) return false;
     if (stoneByPos[key]) return false;
     if (rainbowByPos[key]) return false;
+    if (cloverArtifact && cloverArtifact.key === key) return false;
     if (playerPositions.has(key)) return false;
     if (treasure && treasure.key === key) return false;
     if (flowerArtifact && flowerArtifact.key === key) return false;
@@ -989,6 +1009,19 @@ function clearFlower() {
   flowerTurnsRemaining = 0;
 }
 
+function clearClover() {
+  if (!cloverArtifact) return;
+  const { x, y } = cloverArtifact;
+  const cell = cloverArtifact.elem;
+  if (cell) {
+    cell.classList.remove("clover", "important");
+    clearCellIcon(cell);
+    setCellToInactive(x, y, { skipTreasureCleanup: true });
+  }
+  cloverArtifact = null;
+  cloverTurnsRemaining = 0;
+}
+
 function clearStone(key) {
   const entry = stoneByPos[key];
   if (!entry) return;
@@ -1040,6 +1073,46 @@ function spawnFlower() {
   setCellIcon(cell, FLOWER_ICON.file, FLOWER_ICON.alt);
   flowerArtifact = { key, x, y, elem: cell };
   flowerTurnsRemaining = FLOWER_DURATION;
+  return true;
+}
+
+function getCloverEligibleKeys() {
+  const playerPositions = new Set(players.map(p => `${p.x},${p.y}`));
+  return Object.keys(grid).filter(key => {
+    if (nodeByPos[key]) return false;
+    if (resourceByPos[key]) return false;
+    if (specialByPos[key]) return false;
+    if (stoneByPos[key]) return false;
+    if (rainbowByPos[key]) return false;
+    if (masterActive && key === MASTER_CELL.key) return false;
+    if (playerPositions.has(key)) return false;
+    if (treasure && treasure.key === key) return false;
+    if (flowerArtifact && flowerArtifact.key === key) return false;
+    if (cloverArtifact && cloverArtifact.key === key) return false;
+    if (barbarianCells.some(cell => cell.key === key)) return false;
+    if (blockedCellKeys.has(key)) return false;
+    const cell = grid[key];
+    if (!cell) return false;
+    if (!cell.classList.contains("inactive")) return false;
+    return true;
+  });
+}
+
+function spawnClover() {
+  const eligibleKeys = getCloverEligibleKeys();
+  if (eligibleKeys.length === 0) return false;
+  const key = eligibleKeys[Math.floor(Math.random() * eligibleKeys.length)];
+  const [xStr, yStr] = key.split(",");
+  const x = Number(xStr);
+  const y = Number(yStr);
+  const cell = grid[key];
+  if (!cell) return false;
+  cell.classList.remove("inactive");
+  cell.classList.add("clover", "important");
+  cell.textContent = "";
+  setCellIcon(cell, "clover.png", "Клевер");
+  cloverArtifact = { key, x, y, elem: cell };
+  cloverTurnsRemaining = CLOVER_DURATION;
   return true;
 }
 
@@ -1095,6 +1168,15 @@ function handleFlowerTimers() {
   }
 }
 
+function handleCloverTimers() {
+  if (cloverArtifact) {
+    cloverTurnsRemaining -= 1;
+    if (cloverTurnsRemaining <= 0) {
+      clearClover();
+    }
+  }
+}
+
 function handleStoneSpawns() {
   if (nextStoneSpawnTurn === null) {
     nextStoneSpawnTurn = randomIntRange(STONE_FIRST_MIN_TURN, STONE_FIRST_MAX_TURN);
@@ -1105,6 +1187,15 @@ function handleStoneSpawns() {
     nextStoneSpawnTurn =
       turnCounter + randomIntRange(STONE_COOLDOWN_MIN, STONE_COOLDOWN_MAX);
   }
+}
+
+function handleCloverSpawns() {
+  if (nextCloverSpawnTurn === null) {
+    nextCloverSpawnTurn = randomIntRange(CLOVER_SPAWN_MIN, CLOVER_SPAWN_MAX);
+  }
+  if (turnCounter < nextCloverSpawnTurn) return;
+  spawnClover();
+  nextCloverSpawnTurn = turnCounter + randomIntRange(CLOVER_SPAWN_MIN, CLOVER_SPAWN_MAX);
 }
 
 function handleRainbowSpawns() {

@@ -20,6 +20,12 @@ const players = [
     slowTurnsRemaining: 0,
     noDoubleTurnsRemaining: 0,
     poisonCount: 0,
+    invisPotionCount: 0,
+    luckPotionCount: 0,
+    invisTurnsRemaining: 0,
+    luckTurnsRemaining: 0,
+    cloverCount: 0,
+    trollClubCount: 0,
     flowerCount: 0,
     ringCount: 0,
     terrorRingCount: 0,
@@ -46,6 +52,12 @@ const players = [
     slowTurnsRemaining: 0,
     noDoubleTurnsRemaining: 0,
     poisonCount: 0,
+    invisPotionCount: 0,
+    luckPotionCount: 0,
+    invisTurnsRemaining: 0,
+    luckTurnsRemaining: 0,
+    cloverCount: 0,
+    trollClubCount: 0,
     flowerCount: 0,
     ringCount: 0,
     terrorRingCount: 0,
@@ -84,15 +96,40 @@ playerColorDots.forEach((dot, index) => {
 const guardAccess = players.map(() => false);
 let pendingGuardMove = null;
 let pendingGuardPlayerIndex = null;
+const POTION_INVIS_TURNS = 25;
+const POTION_LUCK_TURNS = 25;
 const INVENTORY_ITEMS = [
   {key: "poison", label: "Яд", icon: "poison.png", count: player => player.poisonCount || 0},
+  {key: "potion-invis", label: "Зелье невидимости", icon: "potion_invis.png", count: player => player.invisPotionCount || 0, useAction: "potion-invis"},
+  {key: "potion-luck", label: "Зелье удачи", icon: "potion_luck.png", count: player => player.luckPotionCount || 0, useAction: "potion-luck"},
+  {key: "clover", label: "Клевер", icon: "clover.png", count: player => player.cloverCount || 0},
   {key: "flower", label: "Таинственный цветок", icon: "mystic_flower.png", count: player => player.flowerCount || 0},
   {key: "ring", label: "Кольцо убеждения", icon: "ring_persuasion.png", count: player => player.ringCount || 0},
   {key: "terror-ring", label: "Кольцо ужаса", icon: "ring_terror.png", count: player => player.terrorRingCount || 0},
   {key: "rainbow-stone", label: "Радужный камень", icon: "rainbow_stone.png", count: player => player.rainbowStoneCount || 0},
+  {key: "troll-club", label: "Дубинка троллей", icon: "troll_club.png", count: player => player.trollClubCount || 0},
   {key: "hero-hilt", label: "Рукоять меча героя", icon: "hero_hilt.png", count: player => player.heroHiltCount || 0},
   {key: "sword", label: "Меч героя", icon: "sword.png", count: player => (player.hasSword ? 1 : 0)}
 ];
+
+function applyPotion(playerIndex, type) {
+  const player = players[playerIndex];
+  if (!player) return;
+  if (type === "potion-invis") {
+    if ((player.invisPotionCount || 0) <= 0) return;
+    player.invisPotionCount -= 1;
+    player.invisTurnsRemaining = Math.max(player.invisTurnsRemaining || 0, POTION_INVIS_TURNS);
+    showPickupToast("Зелье невидимости: тролли не атакуют 25 ходов.");
+  }
+  if (type === "potion-luck") {
+    if ((player.luckPotionCount || 0) <= 0) return;
+    player.luckPotionCount -= 1;
+    player.luckTurnsRemaining = Math.max(player.luckTurnsRemaining || 0, POTION_LUCK_TURNS);
+    showPickupToast("Зелье удачи: +1.6 к ресурсам на 25 ходов.");
+  }
+  updatePlayerResources(playerIndex);
+  updateInventory(playerIndex);
+}
 
 function updateInventory(playerIndex) {
   const panel = inventoryPanels[playerIndex];
@@ -114,6 +151,14 @@ function updateInventory(playerIndex) {
     label.textContent = count > 1 ? `${item.label} ×${count}` : item.label;
     entry.appendChild(icon);
     entry.appendChild(label);
+    if (item.useAction) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "inventory-use";
+      btn.textContent = "Применить";
+      btn.addEventListener("click", () => applyPotion(playerIndex, item.useAction));
+      entry.appendChild(btn);
+    }
     itemsRoot.appendChild(entry);
   });
 }
@@ -140,6 +185,22 @@ function updatePlayerResources(playerIndex) {
   const killsSpan = panel.querySelector('[data-stat="barbarian-kills"]');
   if (killsSpan) {
     killsSpan.textContent = player.barbarianKills || 0;
+  }
+  const negativeSpan = panel.querySelector('[data-stat="negative-buffs"]');
+  if (negativeSpan) {
+    const parts = [];
+    if ((player.slowTurnsRemaining || 0) > 0) parts.push(`Замедление ${player.slowTurnsRemaining}`);
+    if ((player.noDoubleTurnsRemaining || 0) > 0) parts.push(`Без дубля ${player.noDoubleTurnsRemaining}`);
+    if ((player.stunnedTurnsRemaining || 0) > 0) parts.push(`Оглушение ${player.stunnedTurnsRemaining}`);
+    negativeSpan.textContent = parts.length ? parts.join(", ") : "нет";
+  }
+  const positiveSpan = panel.querySelector('[data-stat="positive-buffs"]');
+  if (positiveSpan) {
+    const parts = [];
+    if ((player.invisTurnsRemaining || 0) > 0) parts.push(`Невидимость ${player.invisTurnsRemaining}`);
+    if ((player.luckTurnsRemaining || 0) > 0) parts.push(`Удача ${player.luckTurnsRemaining}`);
+    if ((player.stoneBonusRollsRemaining || 0) > 0) parts.push(`Ходы подряд ${player.stoneBonusRollsRemaining}`);
+    positiveSpan.textContent = parts.length ? parts.join(", ") : "нет";
   }
   const castleKey = getFirstOwnedCastleKey(playerIndex);
   const stats = castleKey ? ensureCastleStats(castleKey) : null;
@@ -277,7 +338,7 @@ function updateMageActionButtons(playerIndex) {
   mageActionButtons.forEach(btn => {
     const action = btn.dataset.mageAction;
     const baseCost = getMageActionCost(action);
-    if (!player || (baseCost === null && action !== "flower-infl")) {
+    if (!player || (baseCost === null && action !== "flower-infl" && action !== "clover-luck")) {
       btn.disabled = true;
       return;
     }
@@ -287,6 +348,10 @@ function updateMageActionButtons(playerIndex) {
     }
     if (action === "flower-gold") {
       btn.disabled = (player.flowerCount || 0) <= 0;
+      return;
+    }
+    if (action === "clover-luck") {
+      btn.disabled = (player.cloverCount || 0) <= 0;
       return;
     }
     const cost = getDiscountedGoldCost(player, baseCost);
@@ -354,6 +419,19 @@ function handleMageAction(action) {
     showPickupToast("Таинственный цветок обменян на 1000 золота.");
     const btn = mageActionButtons.find(b => b.dataset.mageAction === "flower-gold");
     flashPrice(btn, 1, "assets/icons/mystic_flower.png", "Таинственный цветок");
+    return;
+  }
+  if (action === "clover-luck") {
+    if ((player.cloverCount || 0) <= 0) {
+      showPickupToast("Нужен клевер.");
+      return;
+    }
+    player.cloverCount -= 1;
+    player.luckPotionCount = (player.luckPotionCount || 0) + 1;
+    updatePlayerResources(pendingMagePlayerIndex);
+    showPickupToast("Зелье удачи добавлено в инвентарь.");
+    const btn = mageActionButtons.find(b => b.dataset.mageAction === "clover-luck");
+    flashPrice(btn, 1, "assets/icons/clover.png", "Клевер");
     return;
   }
   const baseCost = getMageActionCost(action);
@@ -563,6 +641,9 @@ function openMasterModal(playerIndex) {
   if (masterBuyGold) {
     masterBuyGold.disabled = !player || totalResources < 800;
   }
+  if (masterBuyGoldRainbow) {
+    masterBuyGoldRainbow.disabled = !player || (player.rainbowStoneCount || 0) <= 0;
+  }
   if (masterBuyTerrorRing) {
     masterBuyTerrorRing.disabled = !player || (player.ringCount || 0) <= 0;
   }
@@ -603,6 +684,19 @@ if (masterBuyGold) {
     updatePlayerResources(pendingMasterPlayerIndex);
     showPickupToast("Получено 1500 золота.");
     flashPrice(masterBuyGold, 800, "assets/icons/icon-resources.png", "Ресурсы");
+  });
+}
+
+if (masterBuyGoldRainbow) {
+  masterBuyGoldRainbow.addEventListener("click", () => {
+    if (pendingMasterPlayerIndex === null) return;
+    const player = players[pendingMasterPlayerIndex];
+    if (!player || (player.rainbowStoneCount || 0) <= 0) return;
+    player.rainbowStoneCount -= 1;
+    player.pocket.gold += 1000;
+    updatePlayerResources(pendingMasterPlayerIndex);
+    showPickupToast("Получено 1000 золота.");
+    flashPrice(masterBuyGoldRainbow, 1, "assets/icons/rainbow_stone.png", "Радужный камень");
   });
 }
 
@@ -934,13 +1028,18 @@ function openLavka(playerIndex) {
   const gold = getTotalGold(player);
   const cost50 = getDiscountedGoldCost(player, 800);
   const cost100 = getDiscountedGoldCost(player, 1200);
+  const costPotion = getDiscountedGoldCost(player, 250);
   lavkaButtons.forEach(btn => {
     const type = btn.getAttribute("data-lavka-buy");
     if (type === "res-50") btn.disabled = gold < cost50;
     if (type === "res-100") btn.disabled = gold < cost100;
     if (type === "res-1000-infl") btn.disabled = getTotalResources(player) < 1000;
+    if (type === "potion-invis") btn.disabled = gold < costPotion;
+    if (type === "potion-luck") btn.disabled = gold < costPotion;
     if (type === "res-50") setTradePrice(btn, goldPriceHtml(cost50));
     if (type === "res-100") setTradePrice(btn, goldPriceHtml(cost100));
+    if (type === "potion-invis") setTradePrice(btn, goldPriceHtml(costPotion));
+    if (type === "potion-luck") setTradePrice(btn, goldPriceHtml(costPotion));
   });
   lavkaModal.style.display = "flex";
 }
@@ -982,6 +1081,22 @@ lavkaButtons.forEach(btn => {
       player.resources.influence += 300;
       showPickupToast("Получено 300 влияния.");
       flashPrice(btn, 1000, "assets/icons/icon-resources.png", "Ресурсы");
+    }
+    if (type === "potion-invis") {
+      const cost = getDiscountedGoldCost(player, 250);
+      if (getTotalGold(player) < cost) return;
+      spendGold(player, cost);
+      player.invisPotionCount = (player.invisPotionCount || 0) + 1;
+      showPickupToast("Зелье невидимости добавлено в инвентарь.");
+      flashPrice(btn, cost, "assets/icons/icon-gold.png", "Золото");
+    }
+    if (type === "potion-luck") {
+      const cost = getDiscountedGoldCost(player, 250);
+      if (getTotalGold(player) < cost) return;
+      spendGold(player, cost);
+      player.luckPotionCount = (player.luckPotionCount || 0) + 1;
+      showPickupToast("Зелье удачи добавлено в инвентарь.");
+      flashPrice(btn, cost, "assets/icons/icon-gold.png", "Золото");
     }
     updatePlayerResources(lavkaPlayerIndex);
     openLavka(lavkaPlayerIndex);
@@ -1815,6 +1930,12 @@ function resolveTrollBattle(playerIndex, trollArmy) {
   } else if (defenderRemaining > attackerRemaining) {
     winnerName = "\u0422\u0440\u043e\u043b\u043b\u0438";
     winnerIndex = null;
+  }
+  const playerWon = winnerIndex === playerIndex;
+  if (playerWon && Math.random() < 0.3) {
+    player.trollClubCount = (player.trollClubCount || 0) + 1;
+    player.attack += 25;
+    showPickupToast("Вы получили Дубинку троллей: +25 атаки.");
   }
   updatePlayerResources(playerIndex);
   return {
@@ -2686,11 +2807,15 @@ function finalizeMove(gridX, gridY) {
   }
   const trollHere = typeof isTrollAtKey === "function" && isTrollAtKey(key);
   if (trollHere) {
-    const trollArmy = Math.floor(Math.random() * 21) + 30;
-    const battleResult = resolveTrollBattle(currentPlayerIndex, trollArmy);
-    showBattleModal(battleResult);
-    endTurn();
-    return;
+    if (currentPlayer.invisTurnsRemaining > 0) {
+      showPickupToast("Невидимость: тролли вас не атакуют.");
+    } else {
+      const trollArmy = Math.floor(Math.random() * 21) + 30;
+      const battleResult = resolveTrollBattle(currentPlayerIndex, trollArmy);
+      showBattleModal(battleResult);
+      endTurn();
+      return;
+    }
   }
   const specialEntry = specialByPos[key];
   if (specialEntry && specialEntry.disabled && specialEntry.ownerIndex === currentPlayerIndex) {
@@ -2758,6 +2883,9 @@ function finalizeMove(gridX, gridY) {
     if (turnCounter >= 150) {
       amount = Math.floor(amount * 1.75);
     }
+    if (currentPlayer.luckTurnsRemaining > 0) {
+      amount = Math.floor(amount * 1.6);
+    }
     currentPlayer.pocket[type.key] += amount;
     updatePlayerResources(currentPlayerIndex);
     delete resourceByPos[key];
@@ -2778,6 +2906,14 @@ function finalizeMove(gridX, gridY) {
     updatePlayerResources(currentPlayerIndex);
     showPickupToast("Таинственный цветок добавлен в инвентарь.");
     clearFlower();
+  }
+  if (cloverArtifact && cloverArtifact.key === key) {
+    currentPlayer.cloverCount = (currentPlayer.cloverCount || 0) + 1;
+    updatePlayerResources(currentPlayerIndex);
+    showPickupToast("Клевер добавлен в инвентарь.");
+    if (typeof clearClover === "function") {
+      clearClover();
+    }
   }
   endTurn();
 }
@@ -2863,8 +2999,14 @@ function endTurn() {
     }
   }
   handleFlowerTimers();
+  if (typeof handleCloverTimers === "function") {
+    handleCloverTimers();
+  }
   handleStoneTimers();
   handleStoneSpawns();
+  if (typeof handleCloverSpawns === "function") {
+    handleCloverSpawns();
+  }
   handleRainbowTimers();
   handleRainbowSpawns();
   handleMasterCell();
@@ -2918,6 +3060,14 @@ function doRoll() {
   lastDie1 = die1;
   lastDie2 = die2;
   const currentPlayer = players[currentPlayerIndex];
+  if (currentPlayer) {
+    if (currentPlayer.invisTurnsRemaining > 0) {
+      currentPlayer.invisTurnsRemaining = Math.max(0, currentPlayer.invisTurnsRemaining - 1);
+    }
+    if (currentPlayer.luckTurnsRemaining > 0) {
+      currentPlayer.luckTurnsRemaining = Math.max(0, currentPlayer.luckTurnsRemaining - 1);
+    }
+  }
   if (currentPlayer && currentPlayer.stunnedTurnsRemaining > 0) {
     currentPlayer.stunnedTurnsRemaining = Math.max(0, currentPlayer.stunnedTurnsRemaining - 1);
     showPickupToast("Тролли оглушили вас — пропуск хода.");
