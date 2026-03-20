@@ -293,6 +293,7 @@ const devTurnApply = document.getElementById("devTurnApply");
 const devSkipInput = document.getElementById("devSkipInput");
 const devSkipApply = document.getElementById("devSkipApply");
 const testModeBtn = document.getElementById("testModeBtn");
+const disableTestModeBtn = document.getElementById("disableTestModeBtn");
 
 function showWorldDangerModal() {
   if (!worldDangerModal) return;
@@ -769,8 +770,27 @@ function enableTestMode() {
   showPickupToast("Тестовый режим включен.");
 }
 
+function disableTestMode() {
+  testModeEnabled = false;
+  players.forEach((player, index) => {
+    player.resources.gold = 0;
+    player.resources.army = 0;
+    player.resources.influence = 0;
+    player.resources.resources = 0;
+    player.pocket.gold = 0;
+    player.pocket.army = 0;
+    player.pocket.resources = 0;
+    updatePlayerResources(index);
+  });
+  showPickupToast("???????? ????? ????????. ??????? ????????.");
+}
+
+
 if (testModeBtn) {
   testModeBtn.addEventListener("click", enableTestMode);
+}
+if (disableTestModeBtn) {
+  disableTestModeBtn.addEventListener("click", disableTestMode);
 }
 
 function recalcPlayerResourceIncome(playerIndex) {
