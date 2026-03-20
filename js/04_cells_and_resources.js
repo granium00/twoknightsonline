@@ -622,7 +622,7 @@ function setCellToInactive(x, y, {skipTreasureCleanup = false} = {}) {
     clearTreasure();
     return;
   }
-  cell.classList.remove("resource", "important", "owned", "reachable", "barbarian", "special", "forest", "resource-disabled", "mercenary", "mage", "flower", "stone", "rainbow-stone", "master", "troll", "troll-cave");
+  cell.classList.remove("resource", "important", "owned", "reachable", "barbarian", "special", "forest", "resource-disabled", "mercenary", "mage", "flower", "stone", "rainbow-stone", "master", "troll", "troll-cave", "treasure");
   cell.classList.add("inactive");
   cell.textContent = "";
   clearCellIcon(cell);

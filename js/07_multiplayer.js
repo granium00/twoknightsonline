@@ -495,6 +495,8 @@ if (socket) {
     if (isHost || applyingRemoteState) return;
     const action = getActionFromEvent(e);
     if (!action) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
     socket.emit("clientAction", action);
   }, true);
 
