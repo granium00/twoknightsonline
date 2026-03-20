@@ -879,11 +879,11 @@ function formatTime(seconds) {
 }
 
 if (gameTimerDisplay) {
-  gameTimerDisplay.textContent = `ВРЕМЯ: ${formatTime(gameTimerSeconds)}`;
+  gameTimerDisplay.textContent = `?????: ${formatTime(gameTimerSeconds)}`;
   setInterval(() => {
     if (gameEnded) return;
     gameTimerSeconds += 1;
-    gameTimerDisplay.textContent = `ВРЕМЯ: ${formatTime(gameTimerSeconds)}`;
+    gameTimerDisplay.textContent = `?????: ${formatTime(gameTimerSeconds)}`;
   }, 1000);
 }
 
@@ -3166,9 +3166,190 @@ if (rollBtn) {
     tryAutoRoll();
   });
 }
+function resetGameState() {
+  gameEnded = false;
+  worldDangerShown = false;
+  robberEvent = null;
+  robberAmbushThisSession = false;
+  testModeEnabled = false;
+  clearReachable();
+  if (autoRollTimer) {
+    clearTimeout(autoRollTimer);
+    autoRollTimer = null;
+  }
+
+  const startX = startNode.x;
+  const startY = startNode.y;
+  players.forEach((player, index) => {
+    player.x = startX;
+    player.y = startY;
+    player.resources.gold = 0;
+    player.resources.army = 0;
+    player.resources.influence = 0;
+    player.resources.resources = 0;
+    player.pocket.gold = 0;
+    player.pocket.army = 0;
+    player.pocket.resources = 0;
+    player.income.resources = 0;
+    player.attack = 6;
+    player.hasSword = false;
+    player.hasArmor = false;
+    player.hasWorkshopSword = false;
+    player.barbarianKills = 0;
+    player.slowTurnsRemaining = 0;
+    player.noDoubleTurnsRemaining = 0;
+    player.poisonCount = 0;
+    player.invisPotionCount = 0;
+    player.luckPotionCount = 0;
+    player.invisTurnsRemaining = 0;
+    player.luckTurnsRemaining = 0;
+    player.cloverCount = 0;
+    player.trollClubCount = 0;
+    player.flowerCount = 0;
+    player.ringCount = 0;
+    player.terrorRingCount = 0;
+    player.rainbowStoneCount = 0;
+    player.heroHiltCount = 0;
+    player.stoneBonusRollsRemaining = 0;
+    player.stunnedTurnsRemaining = 0;
+    player.barbarianRewards = { r5: false, r10: false, r20: false };
+    updatePlayerResources(index);
+  });
+
+  guardAccess.forEach((_, index) => {
+    guardAccess[index] = false;
+  });
+  pendingGuardMove = null;
+  pendingGuardPlayerIndex = null;
+
+  currentPlayerIndex = 0;
+  movesRemaining = 0;
+  lastRoll = null;
+  lastRollText = "-";
+  lastDie1 = null;
+  lastDie2 = null;
+  extraTurnPending = false;
+  extraTurnReason = null;
+  justRolledDouble = false;
+  reachableKeys = new Set();
+
+  turnCounter = 0;
+  if (typeof turnsUntilResources !== "undefined") {
+    turnsUntilResources = RESOURCE_INTERVAL;
+  }
+  if (typeof turnsUntilTreasure !== "undefined") {
+    turnsUntilTreasure = TREASURE_INTERVAL;
+  }
+  if (typeof treasureTurnsRemaining !== "undefined") {
+    treasureTurnsRemaining = 0;
+  }
+  if (typeof flowerTurnsRemaining !== "undefined") {
+    flowerTurnsRemaining = 0;
+  }
+  if (typeof masterTurnsRemaining !== "undefined") {
+    masterTurnsRemaining = 0;
+  }
+  if (typeof masterActive !== "undefined") {
+    masterActive = false;
+  }
+  if (typeof masterNextSpawnTurn !== "undefined") {
+    masterNextSpawnTurn = MASTER_SPAWN_INTERVAL;
+  }
+  if (typeof cloverTurnsRemaining !== "undefined") {
+    cloverTurnsRemaining = 0;
+  }
+
+  if (typeof treasure !== "undefined") treasure = null;
+  if (typeof flowerArtifact !== "undefined") flowerArtifact = null;
+  if (typeof cloverArtifact !== "undefined") cloverArtifact = null;
+
+  if (typeof resetDynamicCells === "function") {
+    resetDynamicCells();
+  } else {
+    for (let y = 0; y < ROWS; y++) {
+      for (let x = 0; x < COLS; x++) {
+        const key = `${x},${y}`;
+        if (nodeByPos[key]) continue;
+        setCellToInactive(x, y, { skipTreasureCleanup: true });
+      }
+    }
+    Object.keys(resourceByPos).forEach(key => delete resourceByPos[key]);
+    Object.keys(specialByPos).forEach(key => delete specialByPos[key]);
+    Object.keys(stoneByPos).forEach(key => delete stoneByPos[key]);
+    Object.keys(rainbowByPos).forEach(key => delete rainbowByPos[key]);
+    barbarianCells.length = 0;
+    barbarianRespawnTimers.length = 0;
+    mercenaries.length = 0;
+  }
+
+  Object.keys(castleOwnersByKey).forEach(key => {
+    castleOwnersByKey[key] = undefined;
+    const node = nodeByPos[key];
+    if (node && node.elem) {
+      node.elem.classList.remove("owned");
+      node.elem.style.background = "";
+      node.elem.style.borderColor = "";
+    }
+  });
+  Object.keys(castleStatsByKey).forEach(key => delete castleStatsByKey[key]);
+  importantNodes.forEach(node => {
+    if (node.type !== "castle") return;
+    const key = `${node.x},${node.y}`;
+    castleOwnersByKey[key] = undefined;
+    ensureCastleStats(key);
+    updateCastleBadge(key);
+  });
+
+  mercenaryIdCounter = 1;
+  barbarianPhaseStarted = false;
+  robberEvent = null;
+
+  if (typeof initFlowerSpawns === "function") initFlowerSpawns();
+  if (typeof initStoneSpawns === "function") initStoneSpawns();
+  if (typeof initCloverSpawns === "function") initCloverSpawns();
+  if (typeof initRainbowSpawns === "function") initRainbowSpawns();
+
+  if (typeof mageSlot !== "undefined") {
+    mageSlot.active = false;
+    mageSlot.turnsRemaining = 0;
+    mageSlot.cell = null;
+    mageSlot.key = null;
+    mageSlot.x = null;
+    mageSlot.y = null;
+    mageSlot.nextSpawnTurn = 20;
+    mageSlot.nextSpawnIndex = null;
+    if (mageSlot.timerElem) {
+      mageSlot.timerElem.remove();
+      mageSlot.timerElem = null;
+    }
+  }
+
+  if (typeof TROLL_CAVES !== "undefined") {
+    TROLL_CAVES.forEach(cave => (cave.looted = false));
+  }
+  if (typeof initTrollState === "function") initTrollState();
+
+  gameTimerSeconds = 0;
+  if (gameTimerDisplay) {
+    gameTimerDisplay.textContent = `?????: ${formatTime(gameTimerSeconds)}`;
+  }
+
+  updatePawns();
+  players.forEach((_, index) => {
+    recalcPlayerResourceIncome(index);
+    updatePlayerResources(index);
+  });
+  updateTurnUI();
+  updateStatusPanel();
+
+  if (typeof emitStateNow === "function") {
+    emitStateNow(true);
+  }
+}
+
 if (newGameBtn) {
   newGameBtn.addEventListener("click", () => {
-    window.location.reload();
+    resetGameState();
   });
 }
 function relayout() {
