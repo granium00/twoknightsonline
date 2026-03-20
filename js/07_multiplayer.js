@@ -6,6 +6,7 @@ let isHost = false;
 let applyingRemoteState = false;
 let lastStateFingerprint = "";
 let lastEmitAt = 0;
+let performingRemoteAction = false;
 
 function shallowClone(obj) {
   return JSON.parse(JSON.stringify(obj));
@@ -490,6 +491,7 @@ function getActionFromEvent(e) {
 
 function performHostAction(action) {
   if (!action) return;
+  performingRemoteAction = true;
   if (action.type === "game_click") {
     const rect = game.getBoundingClientRect();
     const clickX = rect.left + (action.x + 0.5) * cellSize;
@@ -501,6 +503,7 @@ function performHostAction(action) {
       clientY: clickY
     });
     game.dispatchEvent(evt);
+    performingRemoteAction = false;
     return;
   }
   if (action.type === "dom_click") {
@@ -513,6 +516,7 @@ function performHostAction(action) {
     }
     if (el) el.click();
   }
+  performingRemoteAction = false;
 }
 
 if (socket) {
@@ -524,9 +528,10 @@ if (socket) {
   });
 
   socket.on("hostAction", action => {
-    if (!isHost) return;
     performHostAction(action);
-    setTimeout(() => emitStateNow(true), 0);
+    if (isHost) {
+      setTimeout(() => emitStateNow(true), 0);
+    }
   });
 
   socket.on("stateUpdate", state => {
@@ -536,7 +541,7 @@ if (socket) {
   });
 
   document.addEventListener("click", e => {
-    if (isHost || applyingRemoteState) return;
+    if (isHost || applyingRemoteState || performingRemoteAction) return;
     const action = getActionFromEvent(e);
     if (!action) return;
     e.preventDefault();
@@ -544,8 +549,12 @@ if (socket) {
     socket.emit("clientAction", action);
   }, true);
 
-  document.addEventListener("click", () => {
-    if (!isHost || applyingRemoteState) return;
+  document.addEventListener("click", e => {
+    if (!isHost || applyingRemoteState || performingRemoteAction) return;
+    const action = getActionFromEvent(e);
+    if (action) {
+      socket.emit("hostAction", action);
+    }
     setTimeout(() => emitStateNow(), 0);
   }, true);
 

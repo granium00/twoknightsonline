@@ -72,8 +72,12 @@ io.on("connection", socket => {
 
   socket.on("clientAction", action => {
     if (hostId) {
-      io.to(hostId).emit("hostAction", action);
+      io.emit("hostAction", action);
     }
+  });
+
+  socket.on("hostAction", action => {
+    socket.broadcast.emit("hostAction", action);
   });
 
   socket.on("hostState", state => {
