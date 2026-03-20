@@ -1,5 +1,5 @@
-// ------------------------------------------------------------
-//   Простой онлайн-режим через Socket.IO (host authoritative)
+п»ї// ------------------------------------------------------------
+//   РџСЂРѕСЃС‚РѕР№ РѕРЅР»Р°Р№РЅ-СЂРµР¶РёРј С‡РµСЂРµР· Socket.IO (host authoritative)
 // ------------------------------------------------------------
 const socket = typeof io !== "undefined" ? io() : null;
 let isHost = false;
@@ -120,7 +120,7 @@ function buildState() {
 }
 
 function resetDynamicCells() {
-  // Очистка всех не-узловых клеток
+  // РћС‡РёСЃС‚РєР° РІСЃРµС… РЅРµ-СѓР·Р»РѕРІС‹С… РєР»РµС‚РѕРє
   for (let y = 0; y < ROWS; y++) {
     for (let x = 0; x < COLS; x++) {
       const key = `${x},${y}`;
@@ -129,7 +129,7 @@ function resetDynamicCells() {
     }
   }
 
-  // Очистить коллекции
+  // РћС‡РёСЃС‚РёС‚СЊ РєРѕР»Р»РµРєС†РёРё
   Object.keys(resourceByPos).forEach(key => delete resourceByPos[key]);
   Object.keys(specialByPos).forEach(key => delete specialByPos[key]);
   Object.keys(stoneByPos).forEach(key => delete stoneByPos[key]);
@@ -185,8 +185,12 @@ function applySpecialEntry(entry) {
   if (!success) return;
   if (entry.disabled) setSpecialCellDisabled(entry.key, true);
   const cell = grid[entry.key];
-  if (cell && entry.extraClass === "mage") {
-    setCellIcon(cell, "mage.png", "Маг");
+  if (!cell) return;
+  if (entry.extraClass === "mage") {
+    setCellIcon(cell, "mage.png", "РњР°Рі");
+  }
+  if (entry.extraClass === "troll-cave") {
+    setCellIcon(cell, "troll_cave.png", "РџРµС‰РµСЂР° С‚СЂРѕР»Р»РµР№");
   }
 }
 
@@ -198,7 +202,7 @@ function applyTreasure(entry) {
   cell.classList.remove("inactive");
   cell.classList.add("treasure", "important");
   cell.textContent = "";
-  setCellIcon(cell, "treasure.png", "Сокровище");
+  setCellIcon(cell, "treasure.png", "РЎРѕРєСЂРѕРІРёС‰Рµ");
   treasure = { key, x: entry.x, y: entry.y, elem: cell };
 }
 
@@ -221,7 +225,7 @@ function applyStone(entry) {
   cell.classList.remove("inactive");
   cell.classList.add("stone", "important");
   cell.textContent = "";
-  setCellIcon(cell, "stone.png", "Необычный камень");
+  setCellIcon(cell, "stone.png", "РќРµРѕР±С‹С‡РЅС‹Р№ РєР°РјРµРЅСЊ");
   stoneByPos[key] = { key, x: entry.x, y: entry.y, turnsRemaining: entry.turnsRemaining };
 }
 
@@ -232,7 +236,7 @@ function applyRainbow(entry) {
   cell.classList.remove("inactive");
   cell.classList.add("rainbow-stone", "important");
   cell.textContent = "";
-  setCellIcon(cell, "rainbow_stone.png", "Радужный камень");
+  setCellIcon(cell, "rainbow_stone.png", "Р Р°РґСѓР¶РЅС‹Р№ РєР°РјРµРЅСЊ");
   rainbowByPos[key] = { key, x: entry.x, y: entry.y, turnsRemaining: entry.turnsRemaining };
 }
 
@@ -243,7 +247,7 @@ function applyMaster() {
   cell.classList.remove("inactive");
   cell.classList.add("master", "important");
   cell.textContent = "";
-  setCellIcon(cell, "grand_master.png", "Великий Мастер");
+  setCellIcon(cell, "grand_master.png", "Р’РµР»РёРєРёР№ РњР°СЃС‚РµСЂ");
 }
 
 function applyMageSlot(slot) {
@@ -251,7 +255,7 @@ function applyMageSlot(slot) {
   const cell = grid[slot.key];
   if (!cell) return;
   setSpecialCell(slot.x, slot.y, mageSlot.label, "mage", null, null, null, { type: "mage", mageId: mageSlot.id });
-  setCellIcon(cell, "mage.png", "Маг");
+  setCellIcon(cell, "mage.png", "РњР°Рі");
   mageSlot.active = true;
   mageSlot.key = slot.key;
   mageSlot.x = slot.x;
@@ -266,9 +270,10 @@ function applyBarbarianCell(entry) {
   if (!cell) return;
   cell.classList.remove("inactive");
   cell.classList.add("important", "barbarian");
-  cell.textContent = "В";
-  cell.title = "ВАРВАРЫ";
+  cell.textContent = "";
+  cell.title = "Р’РђР Р’РђР Р«";
   cell.setAttribute("data-barbarian", "true");
+  setCellIcon(cell, "barbarian_village.png", "Р’Р°СЂРІР°СЂС‹");
 }
 
 function applyMercenary(entry) {
@@ -393,7 +398,7 @@ function applyState(state) {
   updateTurnUI();
   updateStatusPanel();
   if (gameTimerDisplay) {
-    gameTimerDisplay.textContent = `ВРЕМЯ: ${formatTime(gameTimerSeconds)}`;
+    gameTimerDisplay.textContent = `Р’Р Р•РњРЇ: ${formatTime(gameTimerSeconds)}`;
   }
 
   applyingRemoteState = false;
