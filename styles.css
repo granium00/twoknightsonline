@@ -141,7 +141,7 @@
       top: 50%;
       width: 180%;
       height: 180%;
-      transform: translate(-50%, -50%);
+      transform: translate3d(-50%, -50%, 0);
       object-fit: contain;
       pointer-events: none;
       z-index: 25;
@@ -282,7 +282,10 @@
       align-items: center;
       justify-content: center;
       pointer-events: none;
-      transition: all 0.56s ease-out;
+      transition-property: left, top, transform;
+      transition-duration: 0.35s;
+      transition-timing-function: ease-out;
+      will-change: left, top, transform;
       z-index: 10;
       transform: translate(-50%, -50%);
       background: transparent;

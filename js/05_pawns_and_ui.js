@@ -2876,7 +2876,7 @@ function updatePawn(player, index) {
   const centerY = player.y * cellSize + cellSize / 2;
   pawn.style.left = centerX + "px";
   pawn.style.top  = centerY + "px";
-  pawn.style.transform = "translate(-50%, -50%)";
+  pawn.style.transform = "translate3d(-50%, -50%, 0)";
   pawn.style.zIndex = 10 + index;
 }
 function updatePawns() {
