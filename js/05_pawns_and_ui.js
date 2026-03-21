@@ -2643,8 +2643,15 @@ function buildBattleSummaryLines(result) {
     return lines;
   }
 
-function showBattleModal(result) {
-  if (!battleModal || !battleSummary) return;
+function showBattleModal(result, force = false) {
+  if (!battleModal || !battleSummary || !result) return;
+  const inMultiplayer = typeof socket !== "undefined" && socket;
+  if (inMultiplayer && !force && !isHost) return;
+  if (!force) {
+    const snapshot = JSON.parse(JSON.stringify(result));
+    lastBattleResult = snapshot;
+    lastBattleId += 1;
+  }
   const lines = buildBattleSummaryLines(result);
   battleSummary.innerHTML = lines.map(line => `<p>${line}</p>`).join("");
   battleModal.style.display = "flex";
@@ -2903,6 +2910,8 @@ let autoRollTimer = null;
 let doubleSound = null;
 let audioUnlocked = false;
 let testModeEnabled = false;
+let lastBattleResult = null;
+let lastBattleId = 0;
 
 function tickAllTimedBuffs() {
   players.forEach(player => {
@@ -3412,6 +3421,8 @@ function resetGameState() {
   worldDangerShown = false;
   robberEvent = null;
   robberAmbushThisSession = false;
+  lastBattleResult = null;
+  lastBattleId = 0;
   testModeEnabled = false;
   clearReachable();
   if (autoRollTimer) {

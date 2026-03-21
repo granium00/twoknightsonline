@@ -128,6 +128,8 @@ function buildState() {
     mercenaryIdCounter,
     thieves: shallowClone(thieves),
     thiefIdCounter,
+    lastBattleResult: shallowClone(lastBattleResult),
+    lastBattleId,
     reachableKeys: Array.from(reachableKeys),
     castleOwnersByKey: shallowClone(castleOwnersByKey),
     castleStatsByKey: shallowClone(castleStatsByKey)
@@ -351,6 +353,8 @@ function applyState(state) {
   robberEvent = state.robberEvent ?? robberEvent;
   gameEnded = state.gameEnded ?? gameEnded;
   gameTimerSeconds = state.gameTimerSeconds ?? gameTimerSeconds;
+  const incomingBattleId = state.lastBattleId ?? lastBattleId;
+  const incomingBattleResult = state.lastBattleResult ?? lastBattleResult;
 
   // Players
   state.players?.forEach((data, idx) => {
@@ -455,6 +459,13 @@ function applyState(state) {
   });
   updateTurnUI();
   updateStatusPanel();
+  if (incomingBattleId !== lastBattleId) {
+    lastBattleId = incomingBattleId;
+    lastBattleResult = incomingBattleResult;
+    if (lastBattleResult) {
+      showBattleModal(lastBattleResult, true);
+    }
+  }
   if (typeof updateRobberModalVisibility === "function") {
     updateRobberModalVisibility();
   }
