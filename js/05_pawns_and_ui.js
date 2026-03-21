@@ -860,6 +860,10 @@ let hirePlayerIndex = null;
 
 const mercenaries = [];
 let mercenaryIdCounter = 1;
+const thieves = [];
+let thiefIdCounter = 1;
+const THIEF_SPEED = 5;
+const THIEF_CASTLE_GOLD_LOSS = 1000;
 let repairPending = null;
 let gameEnded = false;
 
@@ -1251,6 +1255,25 @@ function clearMercenaryCell(x, y) {
   setCellToInactive(x, y);
 }
 
+function getThiefAtKey(key) {
+  return thieves.find(entry => entry.key === key) || null;
+}
+
+function setCellToThief(x, y) {
+  const key = `${x},${y}`;
+  const cell = grid[key];
+  if (!cell) return false;
+  cell.classList.remove("inactive");
+  cell.classList.add("important", "thief");
+  cell.textContent = "";
+  setCellIcon(cell, "thief.png", "Вор");
+  return true;
+}
+
+function clearThiefCell(x, y) {
+  setCellToInactive(x, y);
+}
+
 function findHireSpawnCell() {
   const base = getHireBasePosition();
   if (!base) return null;
@@ -1280,6 +1303,11 @@ function findEnemySpecialCell(playerIndex, featureKey) {
     .filter(({ entry }) => entry.disabled !== true);
   if (candidates.length === 0) return null;
   return candidates[0];
+}
+
+function findEnemyCastleKey(playerIndex) {
+  const opponentIndex = getOpponentIndex(playerIndex);
+  return getFirstOwnedCastleKey(opponentIndex);
 }
 
 function spawnMercenary(playerIndex, featureKey, strength, baseCost) {
@@ -1318,6 +1346,39 @@ function spawnMercenary(playerIndex, featureKey, strength, baseCost) {
   return true;
 }
 
+function spawnThief(playerIndex) {
+  const targetKey = findEnemyCastleKey(playerIndex);
+  if (!targetKey) {
+    showPickupToast("РќРµС‚ РІСЂР°Р¶РµСЃРєРѕРіРѕ Р·Р°РјРєР° РґР»СЏ РІРѕСЂР°.");
+    return false;
+  }
+  const spawnPos = findHireSpawnCell();
+  if (!spawnPos) {
+    showPickupToast("РќРµС‚ РјРµСЃС‚Р° СЂСЏРґРѕРј РґР»СЏ РІРѕСЂР°.");
+    return false;
+  }
+  const player = players[playerIndex];
+  if ((player.tokenCount || 0) < 1) {
+    showPickupToast("РќСѓР¶РµРЅ 1 Р¶РµС‚РѕРЅ.");
+    return false;
+  }
+  player.tokenCount -= 1;
+  updatePlayerResources(playerIndex);
+
+  const key = `${spawnPos.x},${spawnPos.y}`;
+  setCellToThief(spawnPos.x, spawnPos.y);
+  thieves.push({
+    id: thiefIdCounter++,
+    key,
+    x: spawnPos.x,
+    y: spawnPos.y,
+    ownerIndex: playerIndex,
+    targetKey
+  });
+  showPickupToast("Р’РѕСЂ РѕС‚РїСЂР°РІР»РµРЅ.");
+  return true;
+}
+
 function openHire(playerIndex) {
   hirePlayerIndex = playerIndex;
   const player = players[playerIndex];
@@ -1325,15 +1386,23 @@ function openHire(playerIndex) {
   const costLumber = getDiscountedGoldCost(player, 500);
   const costMine = getDiscountedGoldCost(player, 750);
   const costClay = getDiscountedGoldCost(player, 1200);
+  const hasEnemyCastle = Boolean(findEnemyCastleKey(playerIndex));
   hireButtons.forEach(btn => {
     const type = btn.getAttribute("data-hire");
     const hasTarget = Boolean(findEnemySpecialCell(playerIndex, type));
     if (type === "lumber") btn.disabled = gold < costLumber || !hasTarget;
     if (type === "mine") btn.disabled = gold < costMine || !hasTarget;
     if (type === "clay") btn.disabled = gold < costClay || !hasTarget;
+    if (type === "thief") btn.disabled = (player.tokenCount || 0) < 1 || !hasEnemyCastle;
     if (type === "lumber") setTradePrice(btn, goldPriceHtml(costLumber));
     if (type === "mine") setTradePrice(btn, goldPriceHtml(costMine));
     if (type === "clay") setTradePrice(btn, goldPriceHtml(costClay));
+    if (type === "thief") {
+      setTradePrice(
+        btn,
+        '<img class="price-icon" src="assets/icons/token.png" alt="Жетон" />Цена: 1 жетон'
+      );
+    }
   });
   hireModal.style.display = "flex";
 }
@@ -1367,6 +1436,10 @@ hireModal.addEventListener("click", (e) => {
       if (type === "clay") {
       const ok = spawnMercenary(hirePlayerIndex, "clay", 50, 1200);
       if (ok) flashPrice(btn, costClay, "assets/icons/icon-gold.png", "Золото");
+      }
+      if (type === "thief") {
+      const ok = spawnThief(hirePlayerIndex);
+      if (ok) flashPrice(btn, 1, "assets/icons/token.png", "Жетон");
       }
       openHire(hirePlayerIndex);
     });
@@ -1595,6 +1668,119 @@ function advanceMercenaries() {
       disableTargetResource(mercenary.targetKey);
       showPickupToast("Наёмники вывели ресурс из строя.");
       mercenaries.splice(i, 1);
+    }
+  }
+}
+
+function isThiefStepAllowed(nx, ny, targetKey) {
+  const key = `${nx},${ny}`;
+  if (blockedCellKeys.has(key)) return false;
+  if (key === targetKey) return true;
+  const cell = grid[key];
+  if (!cell || !cell.classList.contains("inactive")) return false;
+  if (resourceByPos[key]) return false;
+  if (specialByPos[key]) return false;
+  if (players.some(p => p.x === nx && p.y === ny)) return false;
+  if (mercenaries.some(m => m.key === key)) return false;
+  if (thieves.some(t => t.key === key)) return false;
+  return true;
+}
+
+function findThiefPath(startKey, targetKey, maxDepth = 25) {
+  const [sx, sy] = startKey.split(",").map(Number);
+  const queue = [{ x: sx, y: sy }];
+  const prev = new Map();
+  const startId = `${sx},${sy}`;
+  prev.set(startId, null);
+  const dirs = [
+    { dx: 1, dy: 0 },
+    { dx: -1, dy: 0 },
+    { dx: 0, dy: 1 },
+    { dx: 0, dy: -1 }
+  ];
+  let depth = 0;
+  while (queue.length && depth <= maxDepth) {
+    const nextQueue = [];
+    for (const node of queue) {
+      const key = `${node.x},${node.y}`;
+      if (key === targetKey) {
+        const path = [];
+        let cur = key;
+        while (cur && cur !== startId) {
+          path.push(cur);
+          cur = prev.get(cur);
+        }
+        path.reverse();
+        return path;
+      }
+      for (const { dx, dy } of dirs) {
+        const nx = node.x + dx;
+        const ny = node.y + dy;
+        if (nx < 0 || nx >= COLS || ny < 0 || ny >= ROWS) continue;
+        const nkey = `${nx},${ny}`;
+        if (prev.has(nkey)) continue;
+        if (!isThiefStepAllowed(nx, ny, targetKey)) continue;
+        prev.set(nkey, key);
+        nextQueue.push({ x: nx, y: ny });
+      }
+    }
+    queue.splice(0, queue.length, ...nextQueue);
+    depth += 1;
+  }
+  return null;
+}
+
+function removeThiefAtIndex(index) {
+  const thief = thieves[index];
+  if (!thief) return;
+  const node = nodeByPos[thief.key];
+  if (!node || node.type !== "castle") {
+    clearThiefCell(thief.x, thief.y);
+  }
+  thieves.splice(index, 1);
+}
+
+function moveThief(thief) {
+  const target = thief.targetKey;
+  if (!target || thief.key === target) return;
+  const path = findThiefPath(thief.key, target, 80);
+  if (!path || path.length === 0) return;
+  const steps = Math.min(THIEF_SPEED, path.length);
+  const targetNode = nodeByPos[target];
+  const targetIsCastle = targetNode && targetNode.type === "castle";
+  for (let i = 0; i < steps; i += 1) {
+    const [nx, ny] = path[i].split(",").map(Number);
+    clearThiefCell(thief.x, thief.y);
+    thief.x = nx;
+    thief.y = ny;
+    thief.key = `${nx},${ny}`;
+    const reachedTarget = thief.key === target;
+    if (reachedTarget && targetIsCastle) break;
+    setCellToThief(nx, ny);
+    if (reachedTarget) break;
+  }
+}
+
+function advanceThieves() {
+  for (let i = thieves.length - 1; i >= 0; i--) {
+    const thief = thieves[i];
+    if (!thief.targetKey) {
+      removeThiefAtIndex(i);
+      continue;
+    }
+    moveThief(thief);
+    if (thief.key === thief.targetKey) {
+      const ownerIndex = castleOwnersByKey[thief.targetKey];
+      if (typeof ownerIndex === "number" && ownerIndex !== thief.ownerIndex) {
+        const targetPlayer = players[ownerIndex];
+        targetPlayer.resources.gold = Math.max(
+          0,
+          (targetPlayer.resources.gold || 0) - THIEF_CASTLE_GOLD_LOSS
+        );
+        updatePlayerResources(ownerIndex);
+        showPickupToast(`Вор украл ${THIEF_CASTLE_GOLD_LOSS} золота из замка.`);
+      }
+      removeThiefAtIndex(i);
     }
   }
 }
@@ -1837,6 +2023,20 @@ function handleRobberBribe() {
     }
   }
 
+function shouldShowRobberModal() {
+  return Boolean(robberEvent && robberEvent.playerIndex === currentPlayerIndex);
+}
+
+function updateRobberModalVisibility() {
+  if (!robberModal) return;
+  if (shouldShowRobberModal()) {
+    updateRobberModalContent();
+    robberModal.style.display = "flex";
+  } else {
+    hideRobberModal();
+  }
+}
+
 function processRobberAmbushChance() {
   if (robberAmbushThisSession) return false;
   if (robberEvent || movesRemaining > 0) return false;
@@ -1857,8 +2057,7 @@ function processRobberAmbushChance() {
   robberEvent = {playerIndex: currentPlayerIndex, army, bribeCost};
   robberAmbushThisSession = true;
     if (rollBtn) rollBtn.disabled = true;
-    updateRobberModalContent();
-    showRobberModal();
+    updateRobberModalVisibility();
     return true;
   }
 
@@ -3035,6 +3234,9 @@ function updateTurnUI() {
     devTurnInput.value = String(turnCounter);
   }
   updateStatusPanel();
+  if (typeof updateRobberModalVisibility === "function") {
+    updateRobberModalVisibility();
+  }
 }
 
 function endTurn() {
@@ -3052,6 +3254,7 @@ function endTurn() {
   }
   handleBarbarianRespawns();
   advanceMercenaries();
+  advanceThieves();
   movesRemaining = 0;
   lastRoll = null;
   lastRollText = "-";
@@ -3315,7 +3518,9 @@ function resetGameState() {
     barbarianCells.length = 0;
     barbarianRespawnTimers.length = 0;
     mercenaries.length = 0;
+    thieves.length = 0;
   }
+  thieves.length = 0;
 
   Object.keys(castleOwnersByKey).forEach(key => {
     castleOwnersByKey[key] = undefined;
@@ -3336,6 +3541,7 @@ function resetGameState() {
   });
 
   mercenaryIdCounter = 1;
+  thiefIdCounter = 1;
   barbarianPhaseStarted = false;
   robberEvent = null;
 

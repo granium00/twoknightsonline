@@ -125,6 +125,8 @@ function buildState() {
     })),
     mercenaries: shallowClone(mercenaries),
     mercenaryIdCounter,
+    thieves: shallowClone(thieves),
+    thiefIdCounter,
     reachableKeys: Array.from(reachableKeys),
     castleOwnersByKey: shallowClone(castleOwnersByKey),
     castleStatsByKey: shallowClone(castleStatsByKey)
@@ -161,6 +163,7 @@ function resetDynamicCells() {
   barbarianCells.length = 0;
   barbarianRespawnTimers.length = 0;
   mercenaries.length = 0;
+  thieves.length = 0;
   treasure = null;
   flowerArtifact = null;
   cloverArtifact = null;
@@ -317,6 +320,10 @@ function applyMercenary(entry) {
   setCellToMercenary(entry.x, entry.y);
 }
 
+function applyThief(entry) {
+  setCellToThief(entry.x, entry.y);
+}
+
 function applyState(state) {
   applyingRemoteState = true;
 
@@ -426,6 +433,14 @@ function applyState(state) {
   });
   mercenaryIdCounter = state.mercenaryIdCounter ?? mercenaryIdCounter;
 
+  // Thieves
+  thieves.length = 0;
+  (state.thieves || []).forEach(entry => {
+    applyThief(entry);
+    thieves.push(entry);
+  });
+  thiefIdCounter = state.thiefIdCounter ?? thiefIdCounter;
+
   // Reachable
   clearReachable();
   reachableKeys = new Set(state.reachableKeys || []);
@@ -439,6 +454,9 @@ function applyState(state) {
   });
   updateTurnUI();
   updateStatusPanel();
+  if (typeof updateRobberModalVisibility === "function") {
+    updateRobberModalVisibility();
+  }
   if (gameTimerDisplay) {
     gameTimerDisplay.textContent = `ВРЕМЯ: ${formatTime(gameTimerSeconds)}`;
   }
