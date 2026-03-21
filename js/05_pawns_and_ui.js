@@ -297,6 +297,9 @@ const devSkipInput = document.getElementById("devSkipInput");
 const devSkipApply = document.getElementById("devSkipApply");
 const testModeBtn = document.getElementById("testModeBtn");
 const disableTestModeBtn = document.getElementById("disableTestModeBtn");
+const disableRobbersBtn = document.getElementById("disableRobbersBtn");
+const enableRobbersBtn = document.getElementById("enableRobbersBtn");
+let robbersEnabled = true;
 
 function showWorldDangerModal() {
   if (!worldDangerModal) return;
@@ -805,6 +808,25 @@ function disableTestMode() {
   showPickupToast("???????? ????? ????????. ??????? ????????.");
 }
 
+function updateRobberToggleButtons() {
+  if (disableRobbersBtn) disableRobbersBtn.disabled = !robbersEnabled;
+  if (enableRobbersBtn) enableRobbersBtn.disabled = robbersEnabled;
+}
+
+function setRobbersEnabled(nextValue) {
+  robbersEnabled = Boolean(nextValue);
+  if (!robbersEnabled) {
+    robberEvent = null;
+    robberAmbushThisSession = false;
+    hideRobberModal();
+  }
+  updateRobberToggleButtons();
+  showPickupToast(robbersEnabled ? "Разбойники возвращены." : "Разбойники отключены.");
+  if (typeof emitStateNow === "function") {
+    emitStateNow(true);
+  }
+}
+
 
 if (testModeBtn) {
   testModeBtn.addEventListener("click", enableTestMode);
@@ -812,6 +834,13 @@ if (testModeBtn) {
 if (disableTestModeBtn) {
   disableTestModeBtn.addEventListener("click", disableTestMode);
 }
+if (disableRobbersBtn) {
+  disableRobbersBtn.addEventListener("click", () => setRobbersEnabled(false));
+}
+if (enableRobbersBtn) {
+  enableRobbersBtn.addEventListener("click", () => setRobbersEnabled(true));
+}
+updateRobberToggleButtons();
 
 function recalcPlayerResourceIncome(playerIndex) {
   const player = players[playerIndex];
@@ -2025,6 +2054,7 @@ function handleRobberBribe() {
 
 function shouldShowRobberModal() {
   if (!robberEvent) return false;
+  if (!robbersEnabled) return false;
   const hasLocalIndex = typeof localPlayerIndex !== "undefined" && localPlayerIndex !== null;
   const compareIndex = hasLocalIndex ? localPlayerIndex : currentPlayerIndex;
   return robberEvent.playerIndex === compareIndex;
@@ -2042,6 +2072,7 @@ function updateRobberModalVisibility() {
 
 function processRobberAmbushChance() {
   if (typeof socket !== "undefined" && socket && !isHost) return false;
+  if (!robbersEnabled) return false;
   if (robberAmbushThisSession) return false;
   if (robberEvent || movesRemaining > 0) return false;
   if (turnCounter < 10) return false;
@@ -3421,6 +3452,7 @@ function resetGameState() {
   worldDangerShown = false;
   robberEvent = null;
   robberAmbushThisSession = false;
+  robbersEnabled = true;
   lastBattleResult = null;
   lastBattleId = 0;
   testModeEnabled = false;
