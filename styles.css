@@ -258,6 +258,13 @@
       box-shadow: 0 0 10px rgba(42, 157, 143, 0.5);
       font-weight: bold;
     }
+    .cell.thief {
+      background: transparent;
+      border-color: transparent;
+      color: inherit;
+      box-shadow: none;
+      font-weight: bold;
+    }
     .cell.resource-disabled {
       background: #3b3f4a;
       border-color: #6b7280;

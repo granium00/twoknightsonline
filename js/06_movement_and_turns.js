@@ -42,6 +42,20 @@ game.addEventListener("click", e => {
     endTurn();
     return;
   }
+  const thiefTarget = getThiefAtKey(key);
+  if (thiefTarget) {
+    const hit = Math.random() < 0.5;
+    if (!hit) {
+      showPickupToast("Вы промахнулись");
+      endTurn();
+      return;
+    }
+    clearThiefCell(thiefTarget.x, thiefTarget.y);
+    const idx = thieves.findIndex(t => t.id === thiefTarget.id);
+    if (idx !== -1) thieves.splice(idx, 1);
+    finalizeMove(gridX, gridY);
+    return;
+  }
   const node = nodeByPos[key];
   if (node && node.id === 15 && currentPlayer.resources.influence < 500) {
     showPickupToast("Нужно 500 влияния, чтобы войти к Королю.");
