@@ -3,6 +3,7 @@
 // ------------------------------------------------------------
 const socket = typeof io !== "undefined" ? io() : null;
 let isHost = false;
+let localPlayerIndex = null;
 let applyingRemoteState = false;
 let lastStateFingerprint = "";
 let lastEmitAt = 0;
@@ -541,6 +542,7 @@ function performHostAction(action) {
 if (socket) {
   socket.on("role", payload => {
     isHost = Boolean(payload?.isHost);
+    localPlayerIndex = isHost ? 0 : 1;
     if (isHost) {
       setTimeout(() => emitStateNow(true), 0);
     }

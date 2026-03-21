@@ -2024,7 +2024,10 @@ function handleRobberBribe() {
   }
 
 function shouldShowRobberModal() {
-  return Boolean(robberEvent && robberEvent.playerIndex === currentPlayerIndex);
+  if (!robberEvent) return false;
+  const hasLocalIndex = typeof localPlayerIndex !== "undefined" && localPlayerIndex !== null;
+  const compareIndex = hasLocalIndex ? localPlayerIndex : currentPlayerIndex;
+  return robberEvent.playerIndex === compareIndex;
 }
 
 function updateRobberModalVisibility() {
@@ -2038,6 +2041,7 @@ function updateRobberModalVisibility() {
 }
 
 function processRobberAmbushChance() {
+  if (typeof socket !== "undefined" && socket && !isHost) return false;
   if (robberAmbushThisSession) return false;
   if (robberEvent || movesRemaining > 0) return false;
   if (turnCounter < 10) return false;
