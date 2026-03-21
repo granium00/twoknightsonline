@@ -8,6 +8,25 @@ let applyingRemoteState = false;
 let lastStateFingerprint = "";
 let lastEmitAt = 0;
 let performingRemoteAction = false;
+let pendingRemoteState = null;
+let applyStateScheduled = false;
+
+function scheduleApplyState(state) {
+  pendingRemoteState = state;
+  if (applyStateScheduled) return;
+  applyStateScheduled = true;
+  const applyNow = () => {
+    applyStateScheduled = false;
+    const next = pendingRemoteState;
+    pendingRemoteState = null;
+    if (next) applyState(next);
+  };
+  if (typeof requestAnimationFrame === "function") {
+    requestAnimationFrame(applyNow);
+  } else {
+    setTimeout(applyNow, 0);
+  }
+}
 
 function shallowClone(obj) {
   return JSON.parse(JSON.stringify(obj));
@@ -58,6 +77,7 @@ function buildState() {
     extraTurnReason,
     justRolledDouble,
     robberAmbushThisSession,
+    robbersEnabled,
     turnCounter,
     turnsUntilResources,
     turnsUntilTreasure,
@@ -341,6 +361,7 @@ function applyState(state) {
   extraTurnReason = state.extraTurnReason ?? extraTurnReason;
   justRolledDouble = state.justRolledDouble ?? justRolledDouble;
   robberAmbushThisSession = state.robberAmbushThisSession ?? robberAmbushThisSession;
+  robbersEnabled = state.robbersEnabled ?? robbersEnabled;
   turnCounter = state.turnCounter ?? turnCounter;
   turnsUntilResources = state.turnsUntilResources ?? turnsUntilResources;
   turnsUntilTreasure = state.turnsUntilTreasure ?? turnsUntilTreasure;
@@ -466,6 +487,9 @@ function applyState(state) {
       showBattleModal(lastBattleResult, true);
     }
   }
+  if (typeof updateRobberToggleButtons === "function") {
+    updateRobberToggleButtons();
+  }
   if (typeof updateRobberModalVisibility === "function") {
     updateRobberModalVisibility();
   }
@@ -569,7 +593,7 @@ if (socket) {
   socket.on("stateUpdate", state => {
     if (isHost) return;
     if (!state || applyingRemoteState) return;
-    applyState(state);
+    scheduleApplyState(state);
   });
 
   document.addEventListener("click", e => {
