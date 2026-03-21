@@ -8,25 +8,6 @@ let applyingRemoteState = false;
 let lastStateFingerprint = "";
 let lastEmitAt = 0;
 let performingRemoteAction = false;
-let pendingRemoteState = null;
-let applyStateScheduled = false;
-
-function scheduleApplyState(state) {
-  pendingRemoteState = state;
-  if (applyStateScheduled) return;
-  applyStateScheduled = true;
-  const applyNow = () => {
-    applyStateScheduled = false;
-    const next = pendingRemoteState;
-    pendingRemoteState = null;
-    if (next) applyState(next);
-  };
-  if (typeof requestAnimationFrame === "function") {
-    requestAnimationFrame(applyNow);
-  } else {
-    setTimeout(applyNow, 0);
-  }
-}
 
 function shallowClone(obj) {
   return JSON.parse(JSON.stringify(obj));
@@ -593,7 +574,7 @@ if (socket) {
   socket.on("stateUpdate", state => {
     if (isHost) return;
     if (!state || applyingRemoteState) return;
-    scheduleApplyState(state);
+    applyState(state);
   });
 
   document.addEventListener("click", e => {
