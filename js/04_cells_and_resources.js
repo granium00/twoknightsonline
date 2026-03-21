@@ -6,9 +6,9 @@ const nodeByPos = {};
 const castleOwnersByKey = {};
 const castleStatsByKey = {};
 const CASTLE_LEVELS = {
-  1: {armor: 50, health: 50},
-  2: {armor: 100, health: 75},
-  3: {armor: 200, health: 100}
+  1: {armor: 75, health: 50},
+  2: {armor: 150, health: 75},
+  3: {armor: 250, health: 100}
 };
 const CASTLE_FEATURES = {
   wall: {cost: 300, armor: 50, label: "Стена"},
@@ -206,8 +206,8 @@ let turnsUntilTreasure = TREASURE_INTERVAL;
 let treasure = null;
 let treasureTurnsRemaining = 0;
 const FLOWER_SPAWN_MIN_TURN = 1;
-const FLOWER_SPAWN_MAX_TURN = 100;
-const FLOWER_SPAWN_COUNT = 3;
+const FLOWER_SPAWN_MAX_TURN = 150;
+const FLOWER_SPAWN_COUNT = 5;
 const FLOWER_DURATION = 4;
 const FLOWER_ICON = { file: "mystic_flower.png", alt: "Таинственный цветок" };
 const flowerSpawnTurns = [];
@@ -229,7 +229,7 @@ let nextStoneSpawnTurn = null;
 const stoneByPos = {};
 const RAINBOW_SPAWN_MIN_TURN = 20;
 const RAINBOW_SPAWN_MAX_TURN = 200;
-const RAINBOW_SPAWN_COUNT = 3;
+const RAINBOW_SPAWN_COUNT = 5;
 const RAINBOW_DURATION = 6;
 const rainbowSpawnTurns = [];
 let rainbowSpawnIndex = 0;
@@ -305,6 +305,8 @@ function markTrollCaveLooted(index, value) {
 
 const TROLL_STAY_MIN = 5;
 const TROLL_STAY_MAX = 10;
+const TROLL_RESPAWN_MIN = 5;
+const TROLL_RESPAWN_MAX = 10;
 const TROLL_SPEED = 4;
 const TROLL_EXTRA_STEPS = 0;
 let trollState = {
@@ -318,7 +320,9 @@ let trollState = {
   path: [],
   pathIndex: 0,
   prevKey: null,
-  stunUsed: false
+  stunUsed: false,
+  active: true,
+  respawnTurns: 0
 };
 
 function initTrollCaves() {
@@ -357,6 +361,8 @@ function initTrollState() {
   trollState.turnsRemaining = randomIntRange(TROLL_STAY_MIN, TROLL_STAY_MAX);
   trollState.prevKey = null;
   trollState.stunUsed = false;
+  trollState.active = true;
+  trollState.respawnTurns = 0;
   updateTrollVisual();
 }
 
@@ -393,11 +399,48 @@ function updateTrollVisual() {
   if (trollState.prevKey) {
     clearTrollTokenAt(trollState.prevKey);
   }
-  if (!trollState.key) return;
+  if (!trollState.active || !trollState.key) return;
   if (!isTrollInCave()) {
     ensureTrollTokenAt(trollState.x, trollState.y);
   }
   trollState.prevKey = trollState.key;
+}
+
+function spawnTrollAtRandomCave() {
+  const index = Math.floor(Math.random() * TROLL_CAVES.length);
+  const cave = TROLL_CAVES[index];
+  trollState.currentCaveIndex = index;
+  trollState.targetCaveIndex = null;
+  trollState.moving = false;
+  trollState.path = [];
+  trollState.pathIndex = 0;
+  trollState.x = cave.x;
+  trollState.y = cave.y;
+  trollState.key = cave.key;
+  trollState.turnsRemaining = randomIntRange(TROLL_STAY_MIN, TROLL_STAY_MAX);
+  trollState.prevKey = null;
+  trollState.stunUsed = false;
+  trollState.active = true;
+  trollState.respawnTurns = 0;
+  updateTrollVisual();
+}
+
+function handleTrollDefeat() {
+  if (!trollState.active) return;
+  if (trollState.key) {
+    clearTrollTokenAt(trollState.key);
+  }
+  trollState.active = false;
+  trollState.respawnTurns = randomIntRange(TROLL_RESPAWN_MIN, TROLL_RESPAWN_MAX);
+  trollState.currentCaveIndex = null;
+  trollState.targetCaveIndex = null;
+  trollState.moving = false;
+  trollState.path = [];
+  trollState.pathIndex = 0;
+  trollState.x = null;
+  trollState.y = null;
+  trollState.key = null;
+  trollState.prevKey = null;
 }
 
 function buildTrollPath(start, end) {
@@ -516,6 +559,15 @@ function startTrollMove() {
 }
 
 function handleTrollsTurn() {
+  if (!trollState.active) {
+    if (trollState.respawnTurns > 0) {
+      trollState.respawnTurns -= 1;
+      if (trollState.respawnTurns <= 0) {
+        spawnTrollAtRandomCave();
+      }
+    }
+    return;
+  }
   if (trollState.currentCaveIndex === null) return;
   if (!trollState.moving) {
     trollState.turnsRemaining -= 1;
@@ -553,9 +605,9 @@ function handleTrollsTurn() {
       trollState.y = ty;
       trollState.key = `${tx},${ty}`;
       if (typeof target.stunnedTurnsRemaining === "number") {
-        target.stunnedTurnsRemaining = Math.max(target.stunnedTurnsRemaining, 2);
+        target.stunnedTurnsRemaining = Math.max(target.stunnedTurnsRemaining, 3);
       } else {
-        target.stunnedTurnsRemaining = 2;
+        target.stunnedTurnsRemaining = 3;
       }
       trollState.stunUsed = true;
       const targetCave = TROLL_CAVES[trollState.targetCaveIndex];
@@ -596,7 +648,7 @@ function handleTrollsTurn() {
 }
 
 function isTrollAtKey(key) {
-  return trollState.key === key;
+  return trollState.active && trollState.key === key;
 }
 
 function isTrollInCaveAtKey(key) {

@@ -38,6 +38,7 @@ function buildState() {
       cloverCount: p.cloverCount,
       trollClubCount: p.trollClubCount,
       flowerCount: p.flowerCount,
+      tokenCount: p.tokenCount,
       ringCount: p.ringCount,
       terrorRingCount: p.terrorRingCount,
       rainbowStoneCount: p.rainbowStoneCount,

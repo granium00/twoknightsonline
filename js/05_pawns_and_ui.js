@@ -27,6 +27,7 @@ const players = [
     cloverCount: 0,
     trollClubCount: 0,
     flowerCount: 0,
+    tokenCount: 0,
     ringCount: 0,
     terrorRingCount: 0,
     rainbowStoneCount: 0,
@@ -59,6 +60,7 @@ const players = [
     cloverCount: 0,
     trollClubCount: 0,
     flowerCount: 0,
+    tokenCount: 0,
     ringCount: 0,
     terrorRingCount: 0,
     rainbowStoneCount: 0,
@@ -84,11 +86,11 @@ const pawns = players.map((player, index) => {
 });
 const MAGE_SLOW_COST = 750;
 const MAGE_NO_DOUBLE_COST = 750;
-const MAGE_POISON_COST = 7500;
+const MAGE_POISON_COST = 4000;
 const MAGE_SLOW_DURATION = 15;
 const MAGE_NO_DOUBLE_DURATION = 15;
 const MAGE_SLOW_PENALTY = 3;
-const POISON_INFLUENCE_THRESHOLD = 2000;
+const POISON_INFLUENCE_THRESHOLD = 1000;
 playerColorDots.forEach((dot, index) => {
   const player = players[index];
   if (player) dot.style.background = player.color;
@@ -104,6 +106,7 @@ const INVENTORY_ITEMS = [
   {key: "potion-luck", label: "Зелье удачи", icon: "potion_luck.png", count: player => player.luckPotionCount || 0, useAction: "potion-luck"},
   {key: "clover", label: "Клевер", icon: "clover.png", count: player => player.cloverCount || 0},
   {key: "flower", label: "Таинственный цветок", icon: "mystic_flower.png", count: player => player.flowerCount || 0},
+  {key: "token", label: "Жетон", icon: "token.png", count: player => player.tokenCount || 0},
   {key: "ring", label: "Кольцо убеждения", icon: "ring_persuasion.png", count: player => player.ringCount || 0},
   {key: "terror-ring", label: "Кольцо ужаса", icon: "ring_terror.png", count: player => player.terrorRingCount || 0},
   {key: "rainbow-stone", label: "Радужный камень", icon: "rainbow_stone.png", count: player => player.rainbowStoneCount || 0},
@@ -638,9 +641,12 @@ function openMasterModal(playerIndex) {
   if (!masterModal || !masterBuyHilt) return;
   const player = players[playerIndex];
   const totalResources = getTotalResources(player);
-  masterBuyHilt.disabled = !player || totalResources < 1500;
+  masterBuyHilt.disabled = !player || totalResources < 800;
   if (masterBuyGold) {
     masterBuyGold.disabled = !player || totalResources < 800;
+  }
+  if (masterBuyToken) {
+    masterBuyToken.disabled = !player || getTotalGold(player) < 1500;
   }
   if (masterBuyGoldRainbow) {
     masterBuyGoldRainbow.disabled = !player || (player.rainbowStoneCount || 0) <= 0;
@@ -664,12 +670,12 @@ if (masterBuyHilt) {
     const player = players[pendingMasterPlayerIndex];
     if (!player) return;
     const totalResources = getTotalResources(player);
-    if (totalResources < 1500) return;
-    spendResources(player, 1500);
+    if (totalResources < 800) return;
+    spendResources(player, 800);
     player.heroHiltCount = (player.heroHiltCount || 0) + 1;
     updatePlayerResources(pendingMasterPlayerIndex);
     showPickupToast("Рукоять меча героя получена.");
-    flashPrice(masterBuyHilt, 1500, "assets/icons/icon-resources.png", "Ресурсы");
+    flashPrice(masterBuyHilt, 800, "assets/icons/icon-resources.png", "Ресурсы");
   });
 }
 
@@ -685,6 +691,20 @@ if (masterBuyGold) {
     updatePlayerResources(pendingMasterPlayerIndex);
     showPickupToast("Получено 1500 золота.");
     flashPrice(masterBuyGold, 800, "assets/icons/icon-resources.png", "Ресурсы");
+  });
+}
+
+if (masterBuyToken) {
+  masterBuyToken.addEventListener("click", () => {
+    if (pendingMasterPlayerIndex === null) return;
+    const player = players[pendingMasterPlayerIndex];
+    if (!player) return;
+    if (getTotalGold(player) < 1500) return;
+    spendGold(player, 1500);
+    player.tokenCount = (player.tokenCount || 0) + 1;
+    updatePlayerResources(pendingMasterPlayerIndex);
+    showPickupToast("Жетон получен.");
+    flashPrice(masterBuyToken, 1500, "assets/icons/icon-gold.png", "Золото");
   });
 }
 
@@ -1952,10 +1972,12 @@ function resolveTrollBattle(playerIndex, trollArmy) {
     winnerIndex = null;
   }
   const playerWon = winnerIndex === playerIndex;
-  if (playerWon && Math.random() < 0.3) {
+  if (playerWon) {
     player.trollClubCount = (player.trollClubCount || 0) + 1;
+    player.tokenCount = (player.tokenCount || 0) + 1;
     player.attack += 25;
     showPickupToast("Вы получили Дубинку троллей: +25 атаки.");
+    showPickupToast("Вы получили Жетон.");
   }
   updatePlayerResources(playerIndex);
   return {
@@ -1982,6 +2004,7 @@ function rollTrollCaveLoot(playerIndex) {
   const influenceLoss = Math.floor(Math.random() * 51);
   const gotRainbow = Math.random() < 0.05;
   const gotFlower = Math.random() < 0.05;
+  const gotToken = Math.random() < 0.15;
   player.pocket.gold += gold;
   player.pocket.resources += resources;
   player.resources.influence -= influenceLoss;
@@ -1991,6 +2014,9 @@ function rollTrollCaveLoot(playerIndex) {
   if (gotFlower) {
     player.flowerCount = (player.flowerCount || 0) + 1;
   }
+  if (gotToken) {
+    player.tokenCount = (player.tokenCount || 0) + 1;
+  }
   updatePlayerResources(playerIndex);
   const parts = [
     `\u0417\u043e\u043b\u043e\u0442\u043e: +${gold}`,
@@ -1999,6 +2025,7 @@ function rollTrollCaveLoot(playerIndex) {
   ];
   if (gotRainbow) parts.push("\u0420\u0430\u0434\u0443\u0436\u043d\u044b\u0439 \u043a\u0430\u043c\u0435\u043d\u044c: \u043d\u0430\u0439\u0434\u0435\u043d");
   if (gotFlower) parts.push("\u0422\u0430\u0438\u043d\u0441\u0442\u0432\u0435\u043d\u043d\u044b\u0439 \u0446\u0432\u0435\u0442\u043e\u043a: \u043d\u0430\u0439\u0434\u0435\u043d");
+  if (gotToken) parts.push("\u0416\u0435\u0442\u043e\u043d: \u043d\u0430\u0439\u0434\u0435\u043d");
   return parts.join(". ");
 }
 
@@ -2829,7 +2856,7 @@ function finalizeMove(gridX, gridY) {
       endTurn();
       return;
     }
-    const battleResult = resolveDragonBattle(currentPlayerIndex, 75);
+    const battleResult = resolveDragonBattle(currentPlayerIndex, 50);
     showBattleModal(battleResult);
     if (battleResult && battleResult.winnerIndex === currentPlayerIndex) {
       showGameOver(currentPlayerIndex);
@@ -2854,8 +2881,13 @@ function finalizeMove(gridX, gridY) {
     if (currentPlayer.invisTurnsRemaining > 0) {
       showPickupToast("Невидимость: тролли вас не атакуют.");
     } else {
-      const trollArmy = Math.floor(Math.random() * 21) + 30;
+      const trollArmy = 60;
       const battleResult = resolveTrollBattle(currentPlayerIndex, trollArmy);
+      if (battleResult && battleResult.winnerIndex === currentPlayerIndex) {
+        if (typeof handleTrollDefeat === "function") {
+          handleTrollDefeat();
+        }
+      }
       showBattleModal(battleResult);
       endTurn();
       return;
@@ -3136,18 +3168,20 @@ function doRoll() {
     effectiveMoves = Math.max(0, roll - penalty);
   }
   const rolledDouble = die1 === die2;
+  const allowDouble = !stoneBonusActive;
+  const effectiveDouble = rolledDouble && allowDouble;
   justRolledDouble = false;
-  let extraTurn = stoneBonusActive || rolledDouble;
-  extraTurnReason = stoneBonusActive ? "stone" : (rolledDouble ? "double" : null);
-  if (rolledDouble) {
+  let extraTurn = stoneBonusActive || effectiveDouble;
+  extraTurnReason = stoneBonusActive ? "stone" : (effectiveDouble ? "double" : null);
+  if (effectiveDouble) {
     robberAmbushThisSession = true;
   }
-  if (!stoneBonusActive && currentPlayer && currentPlayer.noDoubleTurnsRemaining > 0 && rolledDouble) {
+  if (!stoneBonusActive && currentPlayer && currentPlayer.noDoubleTurnsRemaining > 0 && effectiveDouble) {
     extraTurn = false;
     extraTurnReason = null;
   }
   extraTurnPending = extraTurn;
-  if (rolledDouble) {
+  if (effectiveDouble) {
     showDoubleToast();
   }
   if (effectiveMoves <= 0) {
@@ -3206,6 +3240,7 @@ function resetGameState() {
     player.cloverCount = 0;
     player.trollClubCount = 0;
     player.flowerCount = 0;
+    player.tokenCount = 0;
     player.ringCount = 0;
     player.terrorRingCount = 0;
     player.rainbowStoneCount = 0;
