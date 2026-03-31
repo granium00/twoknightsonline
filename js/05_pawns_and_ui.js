@@ -262,6 +262,21 @@ function shouldBroadcastSharedPickupToast(text) {
   return sharedPatterns.some(pattern => text.includes(pattern));
 }
 
+function shouldDelegatePrivateUiToPlayer(playerIndex) {
+  return typeof socket !== "undefined" &&
+    Boolean(socket) &&
+    typeof onlineMatchStarted !== "undefined" &&
+    Boolean(onlineMatchStarted) &&
+    typeof isHost !== "undefined" &&
+    Boolean(isHost) &&
+    typeof localPlayerIndex === "number" &&
+    typeof playerIndex === "number" &&
+    playerIndex !== localPlayerIndex &&
+    typeof performingRemoteAction !== "undefined" &&
+    Boolean(performingRemoteAction) &&
+    typeof emitPrivateUiToPlayer === "function";
+}
+
 function updateInventory(playerIndex) {
   const panel = inventoryPanels[playerIndex];
   const player = players[playerIndex];
@@ -3018,14 +3033,14 @@ function showBattleModal(result, force = false) {
   const inMultiplayer = typeof socket !== "undefined" && socket;
   const sharedBattle = isSharedPlayerBattle(result);
   const canLocalSee = shouldLocalPlayerSeeBattleResult(result);
-  if (inMultiplayer && !canLocalSee) return;
-  if (inMultiplayer && performingRemoteAction && !sharedBattle) return;
-  if (inMultiplayer && !force && !isHost) return;
   if (!force) {
     const snapshot = JSON.parse(JSON.stringify(result));
     lastBattleResult = snapshot;
     lastBattleId += 1;
   }
+  if (inMultiplayer && !canLocalSee) return;
+  if (inMultiplayer && performingRemoteAction && !sharedBattle) return;
+  if (inMultiplayer && !force && !isHost) return;
   const lines = buildBattleSummaryLines(result);
   battleSummary.innerHTML = lines.map(line => `<p>${line}</p>`).join("");
   battleModal.style.display = "flex";
@@ -3116,6 +3131,10 @@ function refreshCastleModal(key, playerIndex) {
 
   function showCastleModal(key, playerIndex) {
     if (!castleModal) return;
+    if (shouldDelegatePrivateUiToPlayer(playerIndex)) {
+      emitPrivateUiToPlayer(playerIndex, "showCastleModal", { key, playerIndex });
+      return;
+    }
     if (typeof socket !== "undefined" &&
         socket &&
         typeof onlineMatchStarted !== "undefined" &&

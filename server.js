@@ -371,6 +371,23 @@ io.on("connection", socket => {
     socket.to(room.code).emit("sharedToast", { text });
   });
 
+  socket.on("privateUi", payload => {
+    const room = getRoomForSocket(socket);
+    if (!room || !room.started) return;
+    const senderIndex = getPlayerIndex(room, socket.id);
+    if (senderIndex !== 0) return;
+    const playerIndex = Number(payload?.playerIndex);
+    const type = String(payload?.type || "").trim();
+    if (!Number.isInteger(playerIndex) || playerIndex < 0 || playerIndex >= room.players.length) return;
+    if (!type) return;
+    const targetSocketId = room.players[playerIndex]?.socketId;
+    if (!targetSocketId) return;
+    io.to(targetSocketId).emit("privateUi", {
+      type,
+      payload: payload?.payload || {}
+    });
+  });
+
   socket.on("disconnect", () => {
     const room = getRoomForSocket(socket);
     if (!room) return;

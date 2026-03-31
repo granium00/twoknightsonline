@@ -760,6 +760,14 @@ function forceStartHostTurn() {
   emitStateNow(true);
 }
 
+function emitPrivateUiToPlayer(playerIndex, type, payload = {}) {
+  if (!socket || !onlineMatchStarted || !isHost) return false;
+  socket.emit("privateUi", { playerIndex, type, payload });
+  pushDebugLog(`privateUi:${type}:p${playerIndex}`);
+  markNetworkEvent(`privateUi:${type}`);
+  return true;
+}
+
 if (createRoomBtn && socket) {
   createRoomBtn.addEventListener("click", () => {
     socket.emit("createRoom");
@@ -963,6 +971,21 @@ if (socket) {
     markNetworkEvent("sharedToast");
     if (typeof showPickupToast === "function") {
       showPickupToast(text, { skipBroadcast: true });
+    }
+  });
+
+  socket.on("privateUi", message => {
+    const type = String(message?.type || "").trim();
+    const payload = message?.payload || {};
+    if (!type) return;
+    pushDebugLog(`privateUiRecv:${type}`);
+    markNetworkEvent(`privateUiRecv:${type}`);
+    if (type === "showBattleModal" && typeof showBattleModal === "function") {
+      showBattleModal(payload.result, true);
+      return;
+    }
+    if (type === "showCastleModal" && typeof showCastleModal === "function") {
+      showCastleModal(payload.key, payload.playerIndex);
     }
   });
 
