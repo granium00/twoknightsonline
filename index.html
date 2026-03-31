@@ -267,10 +267,15 @@
   <div class="toast-card" id="pickupText"></div>
 </div>
 
+<button id="debugOpenBtn" type="button">DEBUG</button>
+
 <div id="debugOverlay">
   <div class="debug-header">
-    <div class="debug-title">NET DEBUG</div>
-    <button id="copyDebugLogBtn" type="button">Копировать</button>
+    <div class="debug-title">NET DEBUG BUILD D1</div>
+    <div class="debug-actions">
+      <button id="copyDebugLogBtn" type="button">Копировать</button>
+      <button id="closeDebugLogBtn" type="button">Закрыть</button>
+    </div>
   </div>
   <textarea id="debugOverlayText" readonly>debug pending...</textarea>
 </div>

@@ -24,6 +24,9 @@ const heroSlot0Btn = document.getElementById("heroSlot0Btn");
 const heroSlot1Btn = document.getElementById("heroSlot1Btn");
 const heroSlot0Status = document.getElementById("heroSlot0Status");
 const heroSlot1Status = document.getElementById("heroSlot1Status");
+const debugOpenBtn = document.getElementById("debugOpenBtn");
+const closeDebugLogBtn = document.getElementById("closeDebugLogBtn");
+const debugOverlay = document.getElementById("debugOverlay");
 const debugOverlayText = document.getElementById("debugOverlayText");
 const copyDebugLogBtn = document.getElementById("copyDebugLogBtn");
 
@@ -795,6 +798,19 @@ if (copyDebugLogBtn && debugOverlayText) {
       pushDebugLog(`copyFailed:${err?.message || err}`);
       updateDebugOverlay();
     }
+  });
+}
+
+if (debugOpenBtn && debugOverlay) {
+  debugOpenBtn.addEventListener("click", () => {
+    debugOverlay.classList.add("open");
+    updateDebugOverlay();
+  });
+}
+
+if (closeDebugLogBtn && debugOverlay) {
+  closeDebugLogBtn.addEventListener("click", () => {
+    debugOverlay.classList.remove("open");
   });
 }
 

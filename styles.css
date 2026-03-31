@@ -1244,31 +1244,45 @@
       z-index: 50;
       pointer-events: none;
     }
-    #debugOverlay {
+    #debugOpenBtn {
       position: fixed;
       top: 10px;
       right: 10px;
+      z-index: 5001;
+      padding: 10px 14px;
+      border: 2px solid #ffd60a;
+      border-radius: 10px;
+      background: #8b0000;
+      color: #ffffff;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+    }
+    #debugOverlay {
+      position: fixed;
+      inset: 0;
       z-index: 5000;
-      width: min(420px, calc(100vw - 20px));
-      display: flex;
+      display: none;
       flex-direction: column;
       gap: 10px;
-      padding: 14px 16px;
-      border-radius: 12px;
-      border: 2px solid rgba(255, 214, 10, 0.95);
-      background: rgba(40, 8, 8, 0.96);
-      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+      padding: 22px;
+      background: rgba(8, 5, 10, 0.96);
+      box-sizing: border-box;
       color: #fff4bf;
       font-family: Consolas, "Courier New", monospace;
       font-size: 14px;
       line-height: 1.5;
       pointer-events: auto;
     }
+    #debugOverlay.open {
+      display: flex;
+    }
     .debug-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 12px;
+      flex-wrap: wrap;
     }
     .debug-title {
       margin: 0;
@@ -1277,6 +1291,10 @@
       font-size: 14px;
       letter-spacing: 0.12em;
       text-transform: uppercase;
+    }
+    .debug-actions {
+      display: flex;
+      gap: 10px;
     }
     #copyDebugLogBtn {
       border: 1px solid rgba(255, 214, 10, 0.95);
@@ -1287,15 +1305,23 @@
       font-weight: 700;
       cursor: pointer;
     }
+    #closeDebugLogBtn {
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      background: #243447;
+      color: #ffffff;
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-weight: 700;
+      cursor: pointer;
+    }
     #debugOverlayText {
       margin: 0;
       width: 100%;
-      min-height: 220px;
-      max-height: min(55vh, 520px);
+      height: calc(100vh - 110px);
       box-sizing: border-box;
-      resize: vertical;
+      resize: none;
       overflow: auto;
-      padding: 10px;
+      padding: 14px;
       border-radius: 8px;
       border: 1px solid rgba(255, 214, 10, 0.4);
       background: rgba(9, 2, 2, 0.72);
