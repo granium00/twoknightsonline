@@ -928,13 +928,15 @@ if (socket) {
 
   socket.on("hostAction", action => {
     if (!onlineMatchStarted) return;
+    if (!isHost) {
+      pushDebugLog(`hostActionIgnored:${action.type}`);
+      return;
+    }
     lastHostActionAt = Date.now();
     pushDebugLog(`hostAction:${action.type}`);
     markNetworkEvent(`hostAction:${action.type}`);
     performHostAction(action);
-    if (isHost) {
-      setTimeout(() => emitStateNow(true), 0);
-    }
+    setTimeout(() => emitStateNow(true), 0);
   });
 
   socket.on("stateUpdate", state => {
@@ -952,6 +954,16 @@ if (socket) {
     pushDebugLog(`resumeState:turn=${state.currentPlayerIndex} moves=${state.movesRemaining}`);
     markNetworkEvent("resumeState");
     applyState(state);
+  });
+
+  socket.on("sharedToast", payload => {
+    const text = String(payload?.text || "").trim();
+    if (!text) return;
+    pushDebugLog(`sharedToast:${text}`);
+    markNetworkEvent("sharedToast");
+    if (typeof showPickupToast === "function") {
+      showPickupToast(text, { skipBroadcast: true });
+    }
   });
 
   document.addEventListener("click", e => {

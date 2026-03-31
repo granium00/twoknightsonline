@@ -205,13 +205,78 @@ function tryBallistaShot(gridX, gridY) {
   return true;
 }
 
+const ENEMY_POCKET_VISIBILITY_RANGE = 5;
+const ENEMY_CASTLE_VISIBILITY_RANGE = 6;
+const HIDDEN_STAT_VALUE = "???";
+
+function isMultiplayerVisionMode() {
+  return typeof socket !== "undefined" &&
+    Boolean(socket) &&
+    typeof onlineMatchStarted !== "undefined" &&
+    Boolean(onlineMatchStarted) &&
+    typeof localPlayerIndex === "number" &&
+    localPlayerIndex >= 0;
+}
+
+function getViewerPlayerIndex() {
+  return isMultiplayerVisionMode() ? localPlayerIndex : null;
+}
+
+function getManhattanDistance(ax, ay, bx, by) {
+  return Math.abs(ax - bx) + Math.abs(ay - by);
+}
+
+function canSeeEnemyPocket(playerIndex) {
+  const viewerIndex = getViewerPlayerIndex();
+  if (viewerIndex === null || viewerIndex === playerIndex) return true;
+  const viewer = players[viewerIndex];
+  const target = players[playerIndex];
+  if (!viewer || !target) return false;
+  return getManhattanDistance(viewer.x, viewer.y, target.x, target.y) <= ENEMY_POCKET_VISIBILITY_RANGE;
+}
+
+function canSeeEnemyCastleResources(playerIndex) {
+  const viewerIndex = getViewerPlayerIndex();
+  if (viewerIndex === null || viewerIndex === playerIndex) return true;
+  const viewer = players[viewerIndex];
+  const castleKey = getFirstOwnedCastleKey(playerIndex);
+  if (!viewer || !castleKey) return false;
+  const [castleX, castleY] = castleKey.split(",").map(Number);
+  return getManhattanDistance(viewer.x, viewer.y, castleX, castleY) <= ENEMY_CASTLE_VISIBILITY_RANGE;
+}
+
+function setPanelStat(panel, selector, value, visible = true) {
+  const elem = panel?.querySelector(selector);
+  if (!elem) return;
+  elem.textContent = visible ? String(value) : HIDDEN_STAT_VALUE;
+}
+
+function shouldBroadcastSharedPickupToast(text) {
+  if (!text) return false;
+  const sharedPatterns = [
+    "В карман: +",
+    "Сокровище:",
+    "Таинственный цветок",
+    "Радужный камень"
+  ];
+  return sharedPatterns.some(pattern => text.includes(pattern));
+}
+
 function updateInventory(playerIndex) {
   const panel = inventoryPanels[playerIndex];
   const player = players[playerIndex];
   if (!panel || !player) return;
   const itemsRoot = panel.querySelector(".inventory-items");
   if (!itemsRoot) return;
+  const inventoryVisible = canSeeEnemyPocket(playerIndex);
   itemsRoot.innerHTML = "";
+  if (!inventoryVisible) {
+    const hidden = document.createElement("div");
+    hidden.className = "inventory-item";
+    hidden.textContent = "Скрыто";
+    itemsRoot.appendChild(hidden);
+    return;
+  }
   INVENTORY_ITEMS.forEach(item => {
     const count = item.count ? item.count(player) : 0;
     if (!count) return;
@@ -246,16 +311,17 @@ function updatePlayerResources(playerIndex) {
   const player = players[playerIndex];
   const panel = playerPanels[playerIndex];
   if (!player || !panel) return;
-  panel.querySelector('[data-stat="gold"]').textContent = player.resources.gold;
-  panel.querySelector('[data-stat="army"]').textContent = player.resources.army;
-  panel.querySelector('[data-stat="influence"]').textContent = player.resources.influence;
-  panel.querySelector('[data-stat="resources"]').textContent = player.resources.resources;
-  panel.querySelector('[data-stat="pocket-gold"]').textContent = player.pocket.gold;
-  panel.querySelector('[data-stat="pocket-army"]').textContent = player.pocket.army;
-  panel.querySelector('[data-stat="pocket-resources"]').textContent = player.pocket.resources;
+  const pocketVisible = canSeeEnemyPocket(playerIndex);
+  const castleVisible = canSeeEnemyCastleResources(playerIndex);
+  setPanelStat(panel, '[data-stat="gold"]', player.resources.gold, castleVisible);
+  setPanelStat(panel, '[data-stat="influence"]', player.resources.influence, castleVisible);
+  setPanelStat(panel, '[data-stat="resources"]', player.resources.resources, castleVisible);
+  setPanelStat(panel, '[data-stat="pocket-gold"]', player.pocket.gold, pocketVisible);
+  setPanelStat(panel, '[data-stat="pocket-army"]', player.pocket.army, pocketVisible);
+  setPanelStat(panel, '[data-stat="pocket-resources"]', player.pocket.resources, pocketVisible);
   const incomeSpan = panel.querySelector('[data-income="resources"]');
   if (incomeSpan) {
-    incomeSpan.textContent = `+${player.income.resources}`;
+    incomeSpan.textContent = castleVisible ? `+${player.income.resources}` : HIDDEN_STAT_VALUE;
   }
   const attackSpan = panel.querySelector('[data-stat="attack"]');
   if (attackSpan) {
@@ -284,10 +350,7 @@ function updatePlayerResources(playerIndex) {
   const castleKey = getFirstOwnedCastleKey(playerIndex);
   const stats = castleKey ? ensureCastleStats(castleKey) : null;
   const storedArmy = stats ? (stats.storageArmy || 0) : 0;
-  const armySpan = panel.querySelector('[data-stat="army"]');
-  if (armySpan) {
-    armySpan.textContent = String(storedArmy);
-  }
+  setPanelStat(panel, '[data-stat="army"]', storedArmy, castleVisible);
   updateInventory(playerIndex);
 }
 
@@ -315,13 +378,23 @@ players.forEach((_, index) => {
   updatePlayerResources(index);
 });
 
-function showPickupToast(text) {
+function showPickupToast(text, options = {}) {
   pickupText.textContent = text;
   pickupToast.style.display = "flex";
   if (toastTimer) clearTimeout(toastTimer);
   toastTimer = setTimeout(() => {
     pickupToast.style.display = "none";
   }, 2000);
+  if (!options.skipBroadcast &&
+      shouldBroadcastSharedPickupToast(text) &&
+      typeof socket !== "undefined" &&
+      socket &&
+      typeof isHost !== "undefined" &&
+      isHost &&
+      typeof onlineMatchStarted !== "undefined" &&
+      onlineMatchStarted) {
+    socket.emit("sharedToast", { text });
+  }
 }
 
 function showDoubleToast() {
@@ -2921,10 +2994,22 @@ function buildBattleSummaryLines(result) {
     return lines;
   }
 
+function isSharedPlayerBattle(result) {
+  return Boolean(
+    result &&
+    typeof result.attackerIndex === "number" &&
+    typeof result.defenderIndex === "number" &&
+    !result.type
+  );
+}
+
 function showBattleModal(result, force = false) {
   if (!battleModal || !battleSummary || !result) return;
   const inMultiplayer = typeof socket !== "undefined" && socket;
+  const sharedBattle = isSharedPlayerBattle(result);
+  if (inMultiplayer && performingRemoteAction && !sharedBattle) return;
   if (inMultiplayer && !force && !isHost) return;
+  if (inMultiplayer && force && !sharedBattle) return;
   if (!force) {
     const snapshot = JSON.parse(JSON.stringify(result));
     lastBattleResult = snapshot;

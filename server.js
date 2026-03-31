@@ -361,6 +361,16 @@ io.on("connection", socket => {
     socket.to(room.code).emit("stateUpdate", state);
   });
 
+  socket.on("sharedToast", payload => {
+    const room = getRoomForSocket(socket);
+    if (!room || !room.started) return;
+    const senderIndex = getPlayerIndex(room, socket.id);
+    if (senderIndex !== 0) return;
+    const text = String(payload?.text || "").trim();
+    if (!text) return;
+    socket.to(room.code).emit("sharedToast", { text });
+  });
+
   socket.on("disconnect", () => {
     const room = getRoomForSocket(socket);
     if (!room) return;
