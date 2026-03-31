@@ -3771,6 +3771,7 @@ function scheduleAutoRoll() {
   if (autoRollTimer) {
     clearTimeout(autoRollTimer);
   }
+  if (typeof socket !== "undefined" && socket && !isHost) return;
   if (gameEnded) return;
   if (movesRemaining > 0) return;
   if (rollInfo) {
@@ -3786,6 +3787,7 @@ function scheduleAutoRoll() {
 }
 
 function tryAutoRoll() {
+  if (typeof socket !== "undefined" && socket && !isHost) return;
   if (gameEnded) return;
   if (movesRemaining > 0) return;
   if (processRobberAmbushChance()) return;
@@ -4059,6 +4061,7 @@ function resetGameState() {
   if (typeof emitStateNow === "function") {
     emitStateNow(true);
   }
+  scheduleAutoRoll();
 }
 
 if (newGameBtn) {
