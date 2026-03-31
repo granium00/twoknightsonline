@@ -170,7 +170,14 @@ const server = http.createServer((req, res) => {
     }
     const ext = path.extname(filePath).toLowerCase();
     const type = MIME_TYPES[ext] || "application/octet-stream";
-    res.writeHead(200, { "Content-Type": type });
+    const headers = { "Content-Type": type };
+    if (ext === ".html" || ext === ".css" || ext === ".js") {
+      headers["Cache-Control"] = "no-store, no-cache, must-revalidate, proxy-revalidate";
+      headers.Pragma = "no-cache";
+      headers.Expires = "0";
+      headers["Surrogate-Control"] = "no-store";
+    }
+    res.writeHead(200, headers);
     fs.createReadStream(filePath).pipe(res);
   });
 });
