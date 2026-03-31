@@ -268,8 +268,11 @@
 </div>
 
 <div id="debugOverlay">
-  <div class="debug-title">NET DEBUG</div>
-  <pre id="debugOverlayText">debug pending...</pre>
+  <div class="debug-header">
+    <div class="debug-title">NET DEBUG</div>
+    <button id="copyDebugLogBtn" type="button">Копировать</button>
+  </div>
+  <textarea id="debugOverlayText" readonly>debug pending...</textarea>
 </div>
 
 <div id="doubleToast">

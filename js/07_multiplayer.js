@@ -25,11 +25,24 @@ const heroSlot1Btn = document.getElementById("heroSlot1Btn");
 const heroSlot0Status = document.getElementById("heroSlot0Status");
 const heroSlot1Status = document.getElementById("heroSlot1Status");
 const debugOverlayText = document.getElementById("debugOverlayText");
+const copyDebugLogBtn = document.getElementById("copyDebugLogBtn");
 
 let lastNetworkEvent = "boot";
 let lastStateUpdateAt = 0;
 let lastHostActionAt = 0;
 let lastClientActionAt = 0;
+const debugLogEntries = [];
+
+function debugNow() {
+  return new Date().toLocaleTimeString("ru-RU", { hour12: false });
+}
+
+function pushDebugLog(message) {
+  debugLogEntries.push(`[${debugNow()}] ${message}`);
+  if (debugLogEntries.length > 120) {
+    debugLogEntries.splice(0, debugLogEntries.length - 120);
+  }
+}
 
 function shallowClone(obj) {
   return JSON.parse(JSON.stringify(obj));
@@ -38,6 +51,7 @@ function shallowClone(obj) {
 function updateDebugOverlay() {
   if (!debugOverlayText) return;
   const lines = [
+    "=== STATUS ===",
     `room=${currentRoomCode || "-"}`,
     `started=${onlineMatchStarted}`,
     `isHost=${isHost}`,
@@ -53,11 +67,14 @@ function updateDebugOverlay() {
     `hostActionAt=${lastHostActionAt || "-"}`,
     `clientActionAt=${lastClientActionAt || "-"}`
   ];
-  debugOverlayText.textContent = lines.join("\n");
+  const logLines = debugLogEntries.length ? debugLogEntries : ["[log] pending..."];
+  debugOverlayText.value = `${lines.join("\n")}\n\n=== LOG ===\n${logLines.join("\n")}`;
+  debugOverlayText.scrollTop = debugOverlayText.scrollHeight;
 }
 
 function markNetworkEvent(label) {
   lastNetworkEvent = label;
+  pushDebugLog(label);
   updateDebugOverlay();
 }
 
@@ -298,6 +315,7 @@ function emitStateNow(force = false) {
   if (!force && fingerprint === lastStateFingerprint) return;
   lastStateFingerprint = fingerprint;
   lastEmitAt = now;
+  pushDebugLog(`emitState:turn=${state.currentPlayerIndex} moves=${state.movesRemaining} force=${force}`);
   markNetworkEvent(`emitState:${force ? "force" : "tick"}`);
   socket.emit("hostState", state);
 }
@@ -493,6 +511,7 @@ function applyThief(entry) {
 function applyState(state) {
   applyingRemoteState = true;
   lastStateUpdateAt = Date.now();
+  pushDebugLog(`applyState:turn=${state.currentPlayerIndex} moves=${state.movesRemaining}`);
   markNetworkEvent("applyState");
 
   currentPlayerIndex = state.currentPlayerIndex ?? currentPlayerIndex;
@@ -681,6 +700,7 @@ function performHostAction(action) {
   if (!action) return;
   performingRemoteAction = true;
   lastHostActionAt = Date.now();
+  pushDebugLog(`performHostAction:${action.type}`);
   markNetworkEvent(`performHostAction:${action.type}`);
   if (action.type === "game_click") {
     const rect = game.getBoundingClientRect();
@@ -715,6 +735,7 @@ function forceStartHostTurn() {
   if (!onlineMatchStarted || !isHost) return;
   if (typeof doRoll !== "function") return;
   if (movesRemaining > 0) return;
+  pushDebugLog("forceStartHostTurn");
   markNetworkEvent("forceStartHostTurn");
   doRoll();
   emitStateNow(true);
@@ -755,6 +776,28 @@ if (copyRoomCodeBtn) {
   });
 }
 
+if (copyDebugLogBtn && debugOverlayText) {
+  copyDebugLogBtn.addEventListener("click", async () => {
+    const text = debugOverlayText.value || "";
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        debugOverlayText.focus();
+        debugOverlayText.select();
+        document.execCommand("copy");
+      }
+      copyDebugLogBtn.textContent = "Скопировано";
+      setTimeout(() => {
+        copyDebugLogBtn.textContent = "Копировать";
+      }, 1200);
+    } catch (err) {
+      pushDebugLog(`copyFailed:${err?.message || err}`);
+      updateDebugOverlay();
+    }
+  });
+}
+
 if (heroSlot0Btn && socket) {
   heroSlot0Btn.addEventListener("click", () => {
     socket.emit("selectHero", { heroIndex: 0 });
@@ -771,6 +814,7 @@ lockGameUi(Boolean(socket));
 
 if (socket) {
   socket.on("roomCreated", payload => {
+    pushDebugLog(`roomCreated:${payload?.roomCode || "-"}`);
     markNetworkEvent("roomCreated");
     currentRoomCode = payload?.roomCode || currentRoomCode;
     if (lobbyRoomCode) {
@@ -781,6 +825,7 @@ if (socket) {
   });
 
   socket.on("roomJoined", payload => {
+    pushDebugLog(`roomJoined:${payload?.roomCode || "-"}`);
     markNetworkEvent("roomJoined");
     currentRoomCode = payload?.roomCode || currentRoomCode;
     setLobbyStatus(`You joined room ${currentRoomCode}. Choose a hero.`);
@@ -788,18 +833,21 @@ if (socket) {
   });
 
   socket.on("roomError", payload => {
+    pushDebugLog(`roomError:${payload?.message || "Room error."}`);
     markNetworkEvent("roomError");
     showRoomError(payload?.message || "Room error.");
     updateDebugOverlay();
   });
 
   socket.on("lobbyState", payload => {
+    pushDebugLog(`lobbyState:started=${Boolean(payload?.started)} yourSlot=${payload?.yourSlot}`);
     markNetworkEvent("lobbyState");
     applyLobbyState(payload);
     updateDebugOverlay();
   });
 
   socket.on("matchStarted", payload => {
+    pushDebugLog(`matchStarted:host=${Boolean(payload?.isHost)} player=${payload?.localPlayerIndex}`);
     markNetworkEvent("matchStarted");
     onlineMatchStarted = true;
     isHost = Boolean(payload?.isHost);
@@ -828,6 +876,7 @@ if (socket) {
   socket.on("hostAction", action => {
     if (!onlineMatchStarted) return;
     lastHostActionAt = Date.now();
+    pushDebugLog(`hostAction:${action.type}`);
     markNetworkEvent(`hostAction:${action.type}`);
     performHostAction(action);
     if (isHost) {
@@ -839,6 +888,7 @@ if (socket) {
     if (!onlineMatchStarted || isHost) return;
     if (!state || applyingRemoteState) return;
     lastStateUpdateAt = Date.now();
+    pushDebugLog(`stateUpdate:turn=${state.currentPlayerIndex} moves=${state.movesRemaining}`);
     markNetworkEvent("stateUpdate");
     applyState(state);
   });
@@ -854,6 +904,7 @@ if (socket) {
       return;
     }
     lastClientActionAt = Date.now();
+    pushDebugLog(`clientAction:${action.type}`);
     markNetworkEvent(`clientAction:${action.type}`);
     e.preventDefault();
     e.stopImmediatePropagation();
@@ -871,6 +922,7 @@ if (socket) {
     }
     if (action) {
       lastHostActionAt = Date.now();
+      pushDebugLog(`hostLocalAction:${action.type}`);
       markNetworkEvent(`hostLocalAction:${action.type}`);
       socket.emit("hostAction", action);
     }
