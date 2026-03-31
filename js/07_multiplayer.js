@@ -1,16 +1,126 @@
-﻿// ------------------------------------------------------------
-//   Простой онлайн-режим через Socket.IO (host authoritative)
+// ------------------------------------------------------------
+//   Онлайн-режим: комнаты, лобби и host authoritative матч
 // ------------------------------------------------------------
 const socket = typeof io !== "undefined" ? io() : null;
 let isHost = false;
 let localPlayerIndex = null;
+let currentRoomCode = "";
+let onlineMatchStarted = false;
+let lobbyState = null;
 let applyingRemoteState = false;
 let lastStateFingerprint = "";
 let lastEmitAt = 0;
 let performingRemoteAction = false;
 
+const lobbyOverlay = document.getElementById("lobbyOverlay");
+const lobbyStatusText = document.getElementById("lobbyStatusText");
+const createRoomBtn = document.getElementById("createRoomBtn");
+const joinRoomInput = document.getElementById("joinRoomInput");
+const joinRoomBtn = document.getElementById("joinRoomBtn");
+const lobbyRoomCodeWrap = document.getElementById("lobbyRoomCodeWrap");
+const lobbyRoomCode = document.getElementById("lobbyRoomCode");
+const copyRoomCodeBtn = document.getElementById("copyRoomCodeBtn");
+const heroSlot0Btn = document.getElementById("heroSlot0Btn");
+const heroSlot1Btn = document.getElementById("heroSlot1Btn");
+const heroSlot0Status = document.getElementById("heroSlot0Status");
+const heroSlot1Status = document.getElementById("heroSlot1Status");
+
 function shallowClone(obj) {
   return JSON.parse(JSON.stringify(obj));
+}
+
+function updatePanelTitles() {
+  playerPanels.forEach((panel, index) => {
+    const title = panel?.querySelector(".player-name");
+    if (!title || !players[index]) return;
+    title.innerHTML = `<span class="player-color" data-color="${index}"></span>${players[index].name}`;
+  });
+  const dots = Array.from(document.querySelectorAll(".player-color"));
+  dots.forEach((dot, index) => {
+    const player = players[index];
+    if (player) {
+      dot.style.background = player.color;
+    }
+  });
+}
+
+function lockGameUi(locked) {
+  document.body.classList.toggle("lobby-open", locked);
+  if (lobbyOverlay) {
+    lobbyOverlay.style.display = locked ? "flex" : "none";
+  }
+}
+
+function setLobbyStatus(text) {
+  if (lobbyStatusText) {
+    lobbyStatusText.textContent = text;
+  }
+}
+
+function updateHeroButton(button, statusElem, hero) {
+  if (!button || !statusElem) return;
+  const roomExists = Boolean(currentRoomCode);
+  const taken = Boolean(hero?.taken);
+  const isYours = Boolean(hero?.isYours);
+  button.disabled = !roomExists || (taken && !isYours) || onlineMatchStarted;
+  button.classList.toggle("taken", taken && !isYours);
+  button.classList.toggle("selected", isYours);
+  if (isYours) {
+    statusElem.textContent = "Выбрано вами";
+  } else if (taken) {
+    statusElem.textContent = "Занято";
+  } else {
+    statusElem.textContent = "Свободно";
+  }
+}
+
+function applyLobbyState(nextState) {
+  lobbyState = nextState || null;
+  if (!nextState?.started) {
+    onlineMatchStarted = false;
+    isHost = false;
+    lastStateFingerprint = "";
+  }
+  currentRoomCode = nextState?.roomCode || currentRoomCode || "";
+  if (lobbyRoomCodeWrap) {
+    lobbyRoomCodeWrap.style.display = currentRoomCode ? "flex" : "none";
+  }
+  if (lobbyRoomCode) {
+    lobbyRoomCode.textContent = currentRoomCode || "------";
+  }
+
+  const hero0 = nextState?.heroes?.find(hero => hero.index === 0);
+  const hero1 = nextState?.heroes?.find(hero => hero.index === 1);
+  updateHeroButton(heroSlot0Btn, heroSlot0Status, hero0);
+  updateHeroButton(heroSlot1Btn, heroSlot1Status, hero1);
+
+  if (!currentRoomCode) {
+    setLobbyStatus("Создайте комнату или войдите по коду, затем выберите героя.");
+    lockGameUi(true);
+    return;
+  }
+  if (nextState?.started) {
+    setLobbyStatus("Матч запускается...");
+    return;
+  }
+  if (typeof nextState?.yourSlot === "number" && nextState.yourSlot >= 0) {
+    const freeHeroes = (nextState.heroes || []).filter(hero => !hero.taken).length;
+    if (freeHeroes > 0) {
+      setLobbyStatus(`Комната ${currentRoomCode}. Ждём второго игрока или выбор второго героя.`);
+    } else {
+      setLobbyStatus(`Комната ${currentRoomCode}. Оба героя выбраны, запускаем матч.`);
+    }
+  } else {
+    setLobbyStatus(`Вы вошли в комнату ${currentRoomCode}. Выберите свободного героя.`);
+  }
+  lockGameUi(true);
+}
+
+function showRoomError(message) {
+  setLobbyStatus(message || "Ошибка комнаты.");
+  if (!onlineMatchStarted) {
+    lockGameUi(true);
+  }
 }
 
 function buildState() {
@@ -110,6 +220,12 @@ function buildState() {
       y: entry.y,
       turnsRemaining: entry.turnsRemaining
     })),
+    portalState: portalState ? {
+      active: portalState.active,
+      keys: Array.isArray(portalState.keys) ? shallowClone(portalState.keys) : [],
+      turnsRemaining: portalState.turnsRemaining,
+      nextSpawnTurn: portalState.nextSpawnTurn
+    } : null,
     mageSlot: {
       active: mageSlot.active,
       turnsRemaining: mageSlot.turnsRemaining,
@@ -138,7 +254,7 @@ function buildState() {
 }
 
 function emitStateNow(force = false) {
-  if (!socket || !isHost || applyingRemoteState) return;
+  if (!socket || !onlineMatchStarted || !isHost || applyingRemoteState) return;
   const now = Date.now();
   if (!force && now - lastEmitAt < 150) return;
   const state = buildState();
@@ -150,7 +266,6 @@ function emitStateNow(force = false) {
 }
 
 function resetDynamicCells() {
-  // Очистка всех не-узловых клеток
   for (let y = 0; y < ROWS; y++) {
     for (let x = 0; x < COLS; x++) {
       const key = `${x},${y}`;
@@ -159,11 +274,18 @@ function resetDynamicCells() {
     }
   }
 
-  // Очистить коллекции
   Object.keys(resourceByPos).forEach(key => delete resourceByPos[key]);
   Object.keys(specialByPos).forEach(key => delete specialByPos[key]);
   Object.keys(stoneByPos).forEach(key => delete stoneByPos[key]);
   Object.keys(rainbowByPos).forEach(key => delete rainbowByPos[key]);
+  if (typeof initPortalState === "function") {
+    initPortalState();
+  } else if (typeof portalState !== "undefined" && portalState) {
+    portalState.active = false;
+    portalState.keys = [];
+    portalState.turnsRemaining = 0;
+    portalState.nextSpawnTurn = null;
+  }
   barbarianCells.length = 0;
   barbarianRespawnTimers.length = 0;
   mercenaries.length = 0;
@@ -220,6 +342,9 @@ function applySpecialEntry(entry) {
   if (!cell) return;
   if (entry.extraClass === "mage") {
     setCellIcon(cell, "mage.png", "Маг");
+  }
+  if (entry.extraClass === "portal") {
+    setCellIcon(cell, "portal.png", "Портал");
   }
   if (entry.extraClass === "troll-cave") {
     setCellIcon(cell, "troll_cave.png", "Пещера троллей");
@@ -331,7 +456,6 @@ function applyThief(entry) {
 function applyState(state) {
   applyingRemoteState = true;
 
-  // Scalars
   currentPlayerIndex = state.currentPlayerIndex ?? currentPlayerIndex;
   movesRemaining = state.movesRemaining ?? movesRemaining;
   lastRoll = state.lastRoll ?? lastRoll;
@@ -358,25 +482,21 @@ function applyState(state) {
   const incomingBattleId = state.lastBattleId ?? lastBattleId;
   const incomingBattleResult = state.lastBattleResult ?? lastBattleResult;
 
-  // Players
   state.players?.forEach((data, idx) => {
     if (!players[idx]) return;
     Object.assign(players[idx], data);
   });
 
-  // Castle maps
   Object.keys(castleOwnersByKey).forEach(key => delete castleOwnersByKey[key]);
   Object.assign(castleOwnersByKey, state.castleOwnersByKey || {});
   Object.keys(castleStatsByKey).forEach(key => delete castleStatsByKey[key]);
   Object.assign(castleStatsByKey, state.castleStatsByKey || {});
 
-  // Guard access
   if (Array.isArray(state.guardAccess)) {
     guardAccess.length = 0;
     guardAccess.push(...state.guardAccess);
   }
 
-  // Troll caves looted state
   if (Array.isArray(state.trollCaves)) {
     state.trollCaves.forEach(cave => {
       const idx = getTrollCaveIndexByKey(cave.key);
@@ -384,44 +504,39 @@ function applyState(state) {
     });
   }
 
-  // Clear and rebuild board
   resetDynamicCells();
-
-  // Special cells (incl. troll caves)
   (state.specialByPos || []).forEach(applySpecialEntry);
-
-  // Resources
   (state.resourceByPos || []).forEach(applyResourceEntry);
 
-  // Treasure / artifacts
   if (state.treasure) applyTreasure(state.treasure);
   if (state.flowerArtifact) applyFlower(state.flowerArtifact);
-  if (state.cloverArtifact) applyClover(state.cloverArtifact);
   if (state.cloverArtifact) applyClover(state.cloverArtifact);
   cloverTurnsRemaining = state.cloverTurnsRemaining ?? cloverTurnsRemaining;
   nextCloverSpawnTurn = state.nextCloverSpawnTurn ?? nextCloverSpawnTurn;
 
-  // Stones
   (state.stoneByPos || []).forEach(applyStone);
   (state.rainbowByPos || []).forEach(applyRainbow);
 
-  // Master
+  if (state.portalState && typeof portalState !== "undefined" && portalState) {
+    portalState.active = Boolean(state.portalState.active);
+    portalState.keys = Array.isArray(state.portalState.keys) ? state.portalState.keys.slice() : [];
+    portalState.turnsRemaining = state.portalState.turnsRemaining ?? portalState.turnsRemaining;
+    portalState.nextSpawnTurn = state.portalState.nextSpawnTurn ?? portalState.nextSpawnTurn;
+  }
+
   if (state.masterActive) applyMaster();
 
-  // Mage
   if (state.mageSlot) {
     mageSlot.nextSpawnTurn = state.mageSlot.nextSpawnTurn ?? mageSlot.nextSpawnTurn;
     applyMageSlot(state.mageSlot);
   }
 
-  // Troll
   if (state.trollState) {
     trollState = Object.assign(trollState, state.trollState);
     trollState.prevKey = null;
     updateTrollVisual();
   }
 
-  // Barbarians
   barbarianCells.length = 0;
   (state.barbarianCells || []).forEach(entry => {
     applyBarbarianCell(entry);
@@ -432,7 +547,6 @@ function applyState(state) {
     barbarianRespawnTimers.push(...state.barbarianRespawnTimers);
   }
 
-  // Mercenaries
   mercenaries.length = 0;
   (state.mercenaries || []).forEach(entry => {
     applyMercenary(entry);
@@ -440,7 +554,6 @@ function applyState(state) {
   });
   mercenaryIdCounter = state.mercenaryIdCounter ?? mercenaryIdCounter;
 
-  // Thieves
   thieves.length = 0;
   (state.thieves || []).forEach(entry => {
     applyThief(entry);
@@ -448,12 +561,11 @@ function applyState(state) {
   });
   thiefIdCounter = state.thiefIdCounter ?? thiefIdCounter;
 
-  // Reachable
   clearReachable();
   reachableKeys = new Set(state.reachableKeys || []);
   showReachable();
 
-  // UI updates
+  updatePanelTitles();
   updatePawns();
   players.forEach((_, idx) => {
     updatePlayerResources(idx);
@@ -497,7 +609,7 @@ function getActionFromEvent(e) {
   }
 
   const clickable = target.closest(
-    "#rollBtn, #newGameBtn, button, [data-buy], [data-lavka-buy], [data-workshop-buy], [data-hire], [data-city-reward], [data-city-exchange], [data-castle-feature], [data-castle-storage]"
+    "#rollBtn, #endTurnBtn, #newGameBtn, button, [data-buy], [data-lavka-buy], [data-workshop-buy], [data-hire], [data-city-reward], [data-city-exchange], [data-castle-feature], [data-castle-storage]"
   );
   if (!clickable) return null;
 
@@ -555,16 +667,95 @@ function performHostAction(action) {
   performingRemoteAction = false;
 }
 
+if (createRoomBtn && socket) {
+  createRoomBtn.addEventListener("click", () => {
+    socket.emit("createRoom");
+  });
+}
+
+if (joinRoomBtn && joinRoomInput && socket) {
+  joinRoomBtn.addEventListener("click", () => {
+    const roomCode = joinRoomInput.value.trim().toUpperCase();
+    if (!roomCode) {
+      showRoomError("Введите код комнаты.");
+      return;
+    }
+    socket.emit("joinRoom", { roomCode });
+  });
+}
+
+if (joinRoomInput) {
+  joinRoomInput.addEventListener("input", () => {
+    joinRoomInput.value = joinRoomInput.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  });
+}
+
+if (copyRoomCodeBtn) {
+  copyRoomCodeBtn.addEventListener("click", async () => {
+    if (!currentRoomCode) return;
+    try {
+      await navigator.clipboard.writeText(currentRoomCode);
+      setLobbyStatus(`Код ${currentRoomCode} скопирован.`);
+    } catch (err) {
+      setLobbyStatus(`Код комнаты: ${currentRoomCode}`);
+    }
+  });
+}
+
+if (heroSlot0Btn && socket) {
+  heroSlot0Btn.addEventListener("click", () => {
+    socket.emit("selectHero", { heroIndex: 0 });
+  });
+}
+
+if (heroSlot1Btn && socket) {
+  heroSlot1Btn.addEventListener("click", () => {
+    socket.emit("selectHero", { heroIndex: 1 });
+  });
+}
+
+lockGameUi(Boolean(socket));
+
 if (socket) {
-  socket.on("role", payload => {
+  socket.on("roomCreated", payload => {
+    currentRoomCode = payload?.roomCode || currentRoomCode;
+    if (lobbyRoomCode) {
+      lobbyRoomCode.textContent = currentRoomCode || "------";
+    }
+    setLobbyStatus(`Комната ${currentRoomCode} создана. Отправьте код второму игроку.`);
+  });
+
+  socket.on("roomJoined", payload => {
+    currentRoomCode = payload?.roomCode || currentRoomCode;
+    setLobbyStatus(`Вы вошли в комнату ${currentRoomCode}. Выберите героя.`);
+  });
+
+  socket.on("roomError", payload => {
+    showRoomError(payload?.message || "Ошибка комнаты.");
+  });
+
+  socket.on("lobbyState", payload => {
+    applyLobbyState(payload);
+  });
+
+  socket.on("matchStarted", payload => {
+    onlineMatchStarted = true;
     isHost = Boolean(payload?.isHost);
-    localPlayerIndex = isHost ? 0 : 1;
+    localPlayerIndex = Number.isInteger(payload?.localPlayerIndex) ? payload.localPlayerIndex : null;
+    currentRoomCode = payload?.roomCode || currentRoomCode;
+    lastStateFingerprint = "";
+    lastEmitAt = 0;
+    setLobbyStatus("Матч начался.");
+    lockGameUi(false);
+    updatePanelTitles();
+    resetGameState();
     if (isHost) {
       setTimeout(() => emitStateNow(true), 0);
     }
   });
 
   socket.on("hostAction", action => {
+    if (!onlineMatchStarted) return;
     performHostAction(action);
     if (isHost) {
       setTimeout(() => emitStateNow(true), 0);
@@ -572,12 +763,13 @@ if (socket) {
   });
 
   socket.on("stateUpdate", state => {
-    if (isHost) return;
+    if (!onlineMatchStarted || isHost) return;
     if (!state || applyingRemoteState) return;
     applyState(state);
   });
 
   document.addEventListener("click", e => {
+    if (!onlineMatchStarted) return;
     if (isHost || applyingRemoteState || performingRemoteAction) return;
     const action = getActionFromEvent(e);
     if (!action) return;
@@ -587,6 +779,7 @@ if (socket) {
   }, true);
 
   document.addEventListener("click", e => {
+    if (!onlineMatchStarted) return;
     if (!isHost || applyingRemoteState || performingRemoteAction) return;
     const action = getActionFromEvent(e);
     if (action) {

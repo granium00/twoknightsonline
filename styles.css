@@ -16,6 +16,150 @@
       justify-content: flex-start;
       overflow: auto;
     }
+    #lobbyOverlay {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background:
+        linear-gradient(135deg, rgba(10, 20, 33, 0.92), rgba(17, 34, 51, 0.84)),
+        radial-gradient(circle at top, rgba(76, 201, 240, 0.14), transparent 35%);
+      backdrop-filter: blur(8px);
+    }
+    .lobby-card {
+      width: min(720px, 100%);
+      background: rgba(12, 22, 35, 0.96);
+      border: 1px solid rgba(91, 143, 185, 0.45);
+      border-radius: 18px;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+      padding: 26px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    .lobby-eyebrow {
+      color: #8ecae6;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+    .lobby-title {
+      margin: 0;
+      font-size: 2rem;
+      color: #f8fafc;
+    }
+    .lobby-text {
+      margin: 0;
+      color: #cbd5e1;
+      line-height: 1.5;
+    }
+    .lobby-room-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .lobby-room-actions > button,
+    .lobby-join button,
+    .lobby-room-code button,
+    .lobby-hero {
+      border-radius: 12px;
+      border: 1px solid #31506f;
+      color: #f8fafc;
+      background: #19324a;
+      cursor: pointer;
+      font-weight: 700;
+    }
+    .lobby-room-actions > button,
+    .lobby-join button {
+      min-height: 48px;
+      padding: 12px 14px;
+    }
+    .lobby-join {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+    }
+    .lobby-join input {
+      min-height: 48px;
+      padding: 0 14px;
+      border-radius: 12px;
+      border: 1px solid #31506f;
+      background: #0f2234;
+      color: #f8fafc;
+      font-size: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .lobby-room-code {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: rgba(25, 50, 74, 0.75);
+      border: 1px solid rgba(49, 80, 111, 0.85);
+    }
+    .lobby-room-code strong {
+      font-size: 1.35rem;
+      letter-spacing: 0.16em;
+      color: #ffe08a;
+    }
+    .lobby-room-code button {
+      margin-left: auto;
+      padding: 8px 12px;
+    }
+    .lobby-heroes {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    .lobby-hero {
+      padding: 18px 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      background: linear-gradient(180deg, #18314a, #122537);
+    }
+    .lobby-hero img {
+      width: 72px;
+      height: 72px;
+      object-fit: contain;
+    }
+    .lobby-hero-name {
+      font-size: 1.05rem;
+    }
+    .lobby-hero-status {
+      color: #cbd5e1;
+      font-size: 0.92rem;
+    }
+    .lobby-hero.selected {
+      border-color: #4cc9f0;
+      box-shadow: 0 0 0 2px rgba(76, 201, 240, 0.25);
+    }
+    .lobby-hero.taken {
+      opacity: 0.7;
+    }
+    .lobby-room-actions > button:disabled,
+    .lobby-join button:disabled,
+    .lobby-room-code button:disabled,
+    .lobby-hero:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    @media (max-width: 720px) {
+      .lobby-room-actions,
+      .lobby-heroes {
+        grid-template-columns: 1fr;
+      }
+      .lobby-title {
+        font-size: 1.6rem;
+      }
+    }
     #game {
       position: relative;
       width: auto;
@@ -1177,6 +1321,19 @@
       letter-spacing: 0.02em;
       white-space: nowrap;
     }
+    #endTurnBtn {
+      display: none;
+      background: #2d6a4f;
+      color: #f1f5f9;
+      border: 1px solid #1f513d;
+      padding: 10px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      width: 100%;
+      letter-spacing: 0.02em;
+      white-space: nowrap;
+    }
     #newGameBtn {
       background: #2a3b55;
       color: #e9ecef;
@@ -1190,6 +1347,10 @@
       white-space: nowrap;
     }
     #rollBtn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    #endTurnBtn:disabled {
       opacity: 0.5;
       cursor: not-allowed;
     }
