@@ -3003,13 +3003,24 @@ function isSharedPlayerBattle(result) {
   );
 }
 
+function shouldLocalPlayerSeeBattleResult(result) {
+  if (!result) return false;
+  if (!(typeof socket !== "undefined" && socket && typeof onlineMatchStarted !== "undefined" && onlineMatchStarted)) {
+    return true;
+  }
+  if (isSharedPlayerBattle(result)) return true;
+  if (typeof localPlayerIndex !== "number") return false;
+  return result.attackerIndex === localPlayerIndex || result.defenderIndex === localPlayerIndex;
+}
+
 function showBattleModal(result, force = false) {
   if (!battleModal || !battleSummary || !result) return;
   const inMultiplayer = typeof socket !== "undefined" && socket;
   const sharedBattle = isSharedPlayerBattle(result);
+  const canLocalSee = shouldLocalPlayerSeeBattleResult(result);
+  if (inMultiplayer && !canLocalSee) return;
   if (inMultiplayer && performingRemoteAction && !sharedBattle) return;
   if (inMultiplayer && !force && !isHost) return;
-  if (inMultiplayer && force && !sharedBattle) return;
   if (!force) {
     const snapshot = JSON.parse(JSON.stringify(result));
     lastBattleResult = snapshot;
@@ -3105,6 +3116,14 @@ function refreshCastleModal(key, playerIndex) {
 
   function showCastleModal(key, playerIndex) {
     if (!castleModal) return;
+    if (typeof socket !== "undefined" &&
+        socket &&
+        typeof onlineMatchStarted !== "undefined" &&
+        onlineMatchStarted &&
+        typeof localPlayerIndex === "number" &&
+        playerIndex !== localPlayerIndex) {
+      return;
+    }
     castleModalKey = key;
     castleModalPlayerIndex = playerIndex;
     refreshCastleModal(key, playerIndex);
