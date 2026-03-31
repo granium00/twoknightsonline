@@ -667,6 +667,14 @@ function performHostAction(action) {
   performingRemoteAction = false;
 }
 
+function forceStartHostTurn() {
+  if (!onlineMatchStarted || !isHost) return;
+  if (typeof doRoll !== "function") return;
+  if (movesRemaining > 0) return;
+  doRoll();
+  emitStateNow(true);
+}
+
 if (createRoomBtn && socket) {
   createRoomBtn.addEventListener("click", () => {
     socket.emit("createRoom");
@@ -752,12 +760,13 @@ if (socket) {
     if (isHost) {
       setTimeout(() => emitStateNow(true), 0);
       setTimeout(() => {
-        if (!onlineMatchStarted) return;
-        if (typeof tryAutoRoll === "function") {
-          tryAutoRoll();
+        forceStartHostTurn();
+      }, 150);
+      setTimeout(() => {
+        if (lastDie1 === null && lastDie2 === null && movesRemaining <= 0) {
+          forceStartHostTurn();
         }
-        emitStateNow(true);
-      }, 250);
+      }, 900);
     }
   });
 
