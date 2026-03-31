@@ -3,6 +3,15 @@
 // ────────────────────────────────────────
 game.addEventListener("click", e => {
   if (gameEnded) return;
+  if (
+    typeof socket !== "undefined" &&
+    socket &&
+    typeof canLocalPlayerAct === "function" &&
+    !canLocalPlayerAct() &&
+    !(typeof performingRemoteAction !== "undefined" && performingRemoteAction)
+  ) {
+    return;
+  }
   const rect = game.getBoundingClientRect();
   const clickX = e.clientX - rect.left;
   const clickY = e.clientY - rect.top;

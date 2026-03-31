@@ -789,6 +789,11 @@ if (socket) {
     if (isHost || applyingRemoteState || performingRemoteAction) return;
     const action = getActionFromEvent(e);
     if (!action) return;
+    if (typeof canLocalPlayerAct === "function" && !canLocalPlayerAct()) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      return;
+    }
     e.preventDefault();
     e.stopImmediatePropagation();
     socket.emit("clientAction", action);
@@ -798,6 +803,11 @@ if (socket) {
     if (!onlineMatchStarted) return;
     if (!isHost || applyingRemoteState || performingRemoteAction) return;
     const action = getActionFromEvent(e);
+    if (action && typeof canLocalPlayerAct === "function" && !canLocalPlayerAct()) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      return;
+    }
     if (action) {
       socket.emit("hostAction", action);
     }
