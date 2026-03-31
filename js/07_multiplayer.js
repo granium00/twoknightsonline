@@ -276,7 +276,7 @@ function buildState() {
       y: entry.y,
       turnsRemaining: entry.turnsRemaining
     })),
-    portalState: portalState ? {
+    portalState: typeof portalState !== "undefined" && portalState ? {
       active: portalState.active,
       keys: Array.isArray(portalState.keys) ? shallowClone(portalState.keys) : [],
       turnsRemaining: portalState.turnsRemaining,
