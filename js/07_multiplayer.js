@@ -1,5 +1,5 @@
 // ------------------------------------------------------------
-//   Онлайн-режим: комнаты, лобби и host authoritative матч
+//   Online mode: lobby rooms + host authoritative match
 // ------------------------------------------------------------
 const socket = typeof io !== "undefined" ? io() : null;
 let isHost = false;
@@ -24,9 +24,41 @@ const heroSlot0Btn = document.getElementById("heroSlot0Btn");
 const heroSlot1Btn = document.getElementById("heroSlot1Btn");
 const heroSlot0Status = document.getElementById("heroSlot0Status");
 const heroSlot1Status = document.getElementById("heroSlot1Status");
+const debugOverlayText = document.getElementById("debugOverlayText");
+
+let lastNetworkEvent = "boot";
+let lastStateUpdateAt = 0;
+let lastHostActionAt = 0;
+let lastClientActionAt = 0;
 
 function shallowClone(obj) {
   return JSON.parse(JSON.stringify(obj));
+}
+
+function updateDebugOverlay() {
+  if (!debugOverlayText) return;
+  const lines = [
+    `room=${currentRoomCode || "-"}`,
+    `started=${onlineMatchStarted}`,
+    `isHost=${isHost}`,
+    `localPlayerIndex=${localPlayerIndex}`,
+    `currentPlayerIndex=${typeof currentPlayerIndex !== "undefined" ? currentPlayerIndex : "-"}`,
+    `movesRemaining=${typeof movesRemaining !== "undefined" ? movesRemaining : "-"}`,
+    `lastDie=${typeof lastDie1 !== "undefined" ? lastDie1 : "-"}:${typeof lastDie2 !== "undefined" ? lastDie2 : "-"}`,
+    `lastRoll=${typeof lastRoll !== "undefined" ? lastRoll : "-"}`,
+    `applyingRemoteState=${applyingRemoteState}`,
+    `performingRemoteAction=${performingRemoteAction}`,
+    `lastEvent=${lastNetworkEvent}`,
+    `stateUpdateAt=${lastStateUpdateAt || "-"}`,
+    `hostActionAt=${lastHostActionAt || "-"}`,
+    `clientActionAt=${lastClientActionAt || "-"}`
+  ];
+  debugOverlayText.textContent = lines.join("\n");
+}
+
+function markNetworkEvent(label) {
+  lastNetworkEvent = label;
+  updateDebugOverlay();
 }
 
 function updatePanelTitles() {
@@ -49,6 +81,7 @@ function lockGameUi(locked) {
   if (lobbyOverlay) {
     lobbyOverlay.style.display = locked ? "flex" : "none";
   }
+  updateDebugOverlay();
 }
 
 function setLobbyStatus(text) {
@@ -66,11 +99,11 @@ function updateHeroButton(button, statusElem, hero) {
   button.classList.toggle("taken", taken && !isYours);
   button.classList.toggle("selected", isYours);
   if (isYours) {
-    statusElem.textContent = "Выбрано вами";
+    statusElem.textContent = "Chosen by you";
   } else if (taken) {
-    statusElem.textContent = "Занято";
+    statusElem.textContent = "Taken";
   } else {
-    statusElem.textContent = "Свободно";
+    statusElem.textContent = "Free";
   }
 }
 
@@ -95,32 +128,35 @@ function applyLobbyState(nextState) {
   updateHeroButton(heroSlot1Btn, heroSlot1Status, hero1);
 
   if (!currentRoomCode) {
-    setLobbyStatus("Создайте комнату или войдите по коду, затем выберите героя.");
+    setLobbyStatus("Create a room or join by code, then choose a hero.");
     lockGameUi(true);
     return;
   }
   if (nextState?.started) {
-    setLobbyStatus("Матч запускается...");
+    setLobbyStatus("Match is starting...");
+    updateDebugOverlay();
     return;
   }
   if (typeof nextState?.yourSlot === "number" && nextState.yourSlot >= 0) {
     const freeHeroes = (nextState.heroes || []).filter(hero => !hero.taken).length;
     if (freeHeroes > 0) {
-      setLobbyStatus(`Комната ${currentRoomCode}. Ждём второго игрока или выбор второго героя.`);
+      setLobbyStatus(`Room ${currentRoomCode}. Waiting for the second player or second hero choice.`);
     } else {
-      setLobbyStatus(`Комната ${currentRoomCode}. Оба героя выбраны, запускаем матч.`);
+      setLobbyStatus(`Room ${currentRoomCode}. Both heroes chosen, starting match.`);
     }
   } else {
-    setLobbyStatus(`Вы вошли в комнату ${currentRoomCode}. Выберите свободного героя.`);
+    setLobbyStatus(`You joined room ${currentRoomCode}. Choose a free hero.`);
   }
   lockGameUi(true);
+  updateDebugOverlay();
 }
 
 function showRoomError(message) {
-  setLobbyStatus(message || "Ошибка комнаты.");
+  setLobbyStatus(message || "Room error.");
   if (!onlineMatchStarted) {
     lockGameUi(true);
   }
+  updateDebugOverlay();
 }
 
 function buildState() {
@@ -262,6 +298,7 @@ function emitStateNow(force = false) {
   if (!force && fingerprint === lastStateFingerprint) return;
   lastStateFingerprint = fingerprint;
   lastEmitAt = now;
+  markNetworkEvent(`emitState:${force ? "force" : "tick"}`);
   socket.emit("hostState", state);
 }
 
@@ -341,13 +378,13 @@ function applySpecialEntry(entry) {
   const cell = grid[entry.key];
   if (!cell) return;
   if (entry.extraClass === "mage") {
-    setCellIcon(cell, "mage.png", "Маг");
+    setCellIcon(cell, "mage.png", "Mage");
   }
   if (entry.extraClass === "portal") {
-    setCellIcon(cell, "portal.png", "Портал");
+    setCellIcon(cell, "portal.png", "Portal");
   }
   if (entry.extraClass === "troll-cave") {
-    setCellIcon(cell, "troll_cave.png", "Пещера троллей");
+    setCellIcon(cell, "troll_cave.png", "Troll cave");
   }
 }
 
@@ -359,7 +396,7 @@ function applyTreasure(entry) {
   cell.classList.remove("inactive");
   cell.classList.add("treasure", "important");
   cell.textContent = "";
-  setCellIcon(cell, "treasure.png", "Сокровище");
+  setCellIcon(cell, "treasure.png", "Treasure");
   treasure = { key, x: entry.x, y: entry.y, elem: cell };
 }
 
@@ -383,7 +420,7 @@ function applyClover(entry) {
   cell.classList.remove("inactive");
   cell.classList.add("clover", "important");
   cell.textContent = "";
-  setCellIcon(cell, "clover.png", "Клевер");
+  setCellIcon(cell, "clover.png", "Clover");
   cloverArtifact = { key, x: entry.x, y: entry.y, elem: cell };
 }
 
@@ -394,7 +431,7 @@ function applyStone(entry) {
   cell.classList.remove("inactive");
   cell.classList.add("stone", "important");
   cell.textContent = "";
-  setCellIcon(cell, "stone.png", "Необычный камень");
+  setCellIcon(cell, "stone.png", "Stone");
   stoneByPos[key] = { key, x: entry.x, y: entry.y, turnsRemaining: entry.turnsRemaining };
 }
 
@@ -405,7 +442,7 @@ function applyRainbow(entry) {
   cell.classList.remove("inactive");
   cell.classList.add("rainbow-stone", "important");
   cell.textContent = "";
-  setCellIcon(cell, "rainbow_stone.png", "Радужный камень");
+  setCellIcon(cell, "rainbow_stone.png", "Rainbow stone");
   rainbowByPos[key] = { key, x: entry.x, y: entry.y, turnsRemaining: entry.turnsRemaining };
 }
 
@@ -416,7 +453,7 @@ function applyMaster() {
   cell.classList.remove("inactive");
   cell.classList.add("master", "important");
   cell.textContent = "";
-  setCellIcon(cell, "grand_master.png", "Великий Мастер");
+  setCellIcon(cell, "grand_master.png", "Master");
 }
 
 function applyMageSlot(slot) {
@@ -424,7 +461,7 @@ function applyMageSlot(slot) {
   const cell = grid[slot.key];
   if (!cell) return;
   setSpecialCell(slot.x, slot.y, mageSlot.label, "mage", null, null, null, { type: "mage", mageId: mageSlot.id });
-  setCellIcon(cell, "mage.png", "Маг");
+  setCellIcon(cell, "mage.png", "Mage");
   mageSlot.active = true;
   mageSlot.key = slot.key;
   mageSlot.x = slot.x;
@@ -440,9 +477,9 @@ function applyBarbarianCell(entry) {
   cell.classList.remove("inactive");
   cell.classList.add("important", "barbarian");
   cell.textContent = "";
-  cell.title = "ВАРВАРЫ";
+  cell.title = "BARBARIANS";
   cell.setAttribute("data-barbarian", "true");
-  setCellIcon(cell, "barbarian_village.png", "Варвары");
+  setCellIcon(cell, "barbarian_village.png", "Barbarians");
 }
 
 function applyMercenary(entry) {
@@ -455,6 +492,8 @@ function applyThief(entry) {
 
 function applyState(state) {
   applyingRemoteState = true;
+  lastStateUpdateAt = Date.now();
+  markNetworkEvent("applyState");
 
   currentPlayerIndex = state.currentPlayerIndex ?? currentPlayerIndex;
   movesRemaining = state.movesRemaining ?? movesRemaining;
@@ -587,10 +626,11 @@ function applyState(state) {
     updateRobberModalVisibility();
   }
   if (gameTimerDisplay) {
-    gameTimerDisplay.textContent = `ВРЕМЯ: ${formatTime(gameTimerSeconds)}`;
+    gameTimerDisplay.textContent = `TIME: ${formatTime(gameTimerSeconds)}`;
   }
 
   applyingRemoteState = false;
+  updateDebugOverlay();
 }
 
 function getActionFromEvent(e) {
@@ -640,6 +680,8 @@ function getActionFromEvent(e) {
 function performHostAction(action) {
   if (!action) return;
   performingRemoteAction = true;
+  lastHostActionAt = Date.now();
+  markNetworkEvent(`performHostAction:${action.type}`);
   if (action.type === "game_click") {
     const rect = game.getBoundingClientRect();
     const clickX = rect.left + (action.x + 0.5) * cellSize;
@@ -652,6 +694,7 @@ function performHostAction(action) {
     });
     game.dispatchEvent(evt);
     performingRemoteAction = false;
+    updateDebugOverlay();
     return;
   }
   if (action.type === "dom_click") {
@@ -665,12 +708,14 @@ function performHostAction(action) {
     if (el) el.click();
   }
   performingRemoteAction = false;
+  updateDebugOverlay();
 }
 
 function forceStartHostTurn() {
   if (!onlineMatchStarted || !isHost) return;
   if (typeof doRoll !== "function") return;
   if (movesRemaining > 0) return;
+  markNetworkEvent("forceStartHostTurn");
   doRoll();
   emitStateNow(true);
 }
@@ -685,7 +730,7 @@ if (joinRoomBtn && joinRoomInput && socket) {
   joinRoomBtn.addEventListener("click", () => {
     const roomCode = joinRoomInput.value.trim().toUpperCase();
     if (!roomCode) {
-      showRoomError("Введите код комнаты.");
+      showRoomError("Enter room code.");
       return;
     }
     socket.emit("joinRoom", { roomCode });
@@ -703,9 +748,9 @@ if (copyRoomCodeBtn) {
     if (!currentRoomCode) return;
     try {
       await navigator.clipboard.writeText(currentRoomCode);
-      setLobbyStatus(`Код ${currentRoomCode} скопирован.`);
+      setLobbyStatus(`Code ${currentRoomCode} copied.`);
     } catch (err) {
-      setLobbyStatus(`Код комнаты: ${currentRoomCode}`);
+      setLobbyStatus(`Room code: ${currentRoomCode}`);
     }
   });
 }
@@ -726,37 +771,47 @@ lockGameUi(Boolean(socket));
 
 if (socket) {
   socket.on("roomCreated", payload => {
+    markNetworkEvent("roomCreated");
     currentRoomCode = payload?.roomCode || currentRoomCode;
     if (lobbyRoomCode) {
       lobbyRoomCode.textContent = currentRoomCode || "------";
     }
-    setLobbyStatus(`Комната ${currentRoomCode} создана. Отправьте код второму игроку.`);
+    setLobbyStatus(`Room ${currentRoomCode} created. Send the code to the second player.`);
+    updateDebugOverlay();
   });
 
   socket.on("roomJoined", payload => {
+    markNetworkEvent("roomJoined");
     currentRoomCode = payload?.roomCode || currentRoomCode;
-    setLobbyStatus(`Вы вошли в комнату ${currentRoomCode}. Выберите героя.`);
+    setLobbyStatus(`You joined room ${currentRoomCode}. Choose a hero.`);
+    updateDebugOverlay();
   });
 
   socket.on("roomError", payload => {
-    showRoomError(payload?.message || "Ошибка комнаты.");
+    markNetworkEvent("roomError");
+    showRoomError(payload?.message || "Room error.");
+    updateDebugOverlay();
   });
 
   socket.on("lobbyState", payload => {
+    markNetworkEvent("lobbyState");
     applyLobbyState(payload);
+    updateDebugOverlay();
   });
 
   socket.on("matchStarted", payload => {
+    markNetworkEvent("matchStarted");
     onlineMatchStarted = true;
     isHost = Boolean(payload?.isHost);
     localPlayerIndex = Number.isInteger(payload?.localPlayerIndex) ? payload.localPlayerIndex : null;
     currentRoomCode = payload?.roomCode || currentRoomCode;
     lastStateFingerprint = "";
     lastEmitAt = 0;
-    setLobbyStatus("Матч начался.");
+    setLobbyStatus("Match started.");
     lockGameUi(false);
     updatePanelTitles();
     resetGameState();
+    updateDebugOverlay();
     if (isHost) {
       setTimeout(() => emitStateNow(true), 0);
       setTimeout(() => {
@@ -772,6 +827,8 @@ if (socket) {
 
   socket.on("hostAction", action => {
     if (!onlineMatchStarted) return;
+    lastHostActionAt = Date.now();
+    markNetworkEvent(`hostAction:${action.type}`);
     performHostAction(action);
     if (isHost) {
       setTimeout(() => emitStateNow(true), 0);
@@ -781,6 +838,8 @@ if (socket) {
   socket.on("stateUpdate", state => {
     if (!onlineMatchStarted || isHost) return;
     if (!state || applyingRemoteState) return;
+    lastStateUpdateAt = Date.now();
+    markNetworkEvent("stateUpdate");
     applyState(state);
   });
 
@@ -794,6 +853,8 @@ if (socket) {
       e.stopImmediatePropagation();
       return;
     }
+    lastClientActionAt = Date.now();
+    markNetworkEvent(`clientAction:${action.type}`);
     e.preventDefault();
     e.stopImmediatePropagation();
     socket.emit("clientAction", action);
@@ -809,6 +870,8 @@ if (socket) {
       return;
     }
     if (action) {
+      lastHostActionAt = Date.now();
+      markNetworkEvent(`hostLocalAction:${action.type}`);
       socket.emit("hostAction", action);
     }
     setTimeout(() => emitStateNow(), 0);
@@ -816,5 +879,8 @@ if (socket) {
 
   setInterval(() => {
     emitStateNow();
+    updateDebugOverlay();
   }, 400);
 }
+
+updateDebugOverlay();
