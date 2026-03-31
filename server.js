@@ -10,6 +10,7 @@ const BUILD_VERSION =
   process.env.RAILWAY_DEPLOYMENT_ID ||
   process.env.RAILWAY_PUBLIC_DOMAIN ||
   "dev";
+const RECONNECT_GRACE_MS = 30000;
 
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -62,8 +63,11 @@ function createRoom() {
   const code = generateRoomCode();
   const room = {
     code,
-    members: new Set(),
-    sockets: [null, null],
+    players: HERO_DEFS.map(() => ({
+      clientId: null,
+      socketId: null
+    })),
+    disconnectTimers: HERO_DEFS.map(() => null),
     latestState: null,
     started: false
   };
@@ -78,7 +82,11 @@ function getRoomForSocket(socket) {
 }
 
 function getPlayerIndex(room, socketId) {
-  return room ? room.sockets.findIndex(id => id === socketId) : -1;
+  return room ? room.players.findIndex(player => player.socketId === socketId) : -1;
+}
+
+function getPlayerIndexByClientId(room, clientId) {
+  return room ? room.players.findIndex(player => player.clientId === clientId) : -1;
 }
 
 function buildEmptyLobbyState() {
@@ -95,51 +103,40 @@ function buildEmptyLobbyState() {
   };
 }
 
-function buildLobbyState(room, socketId) {
-  const yourSlot = getPlayerIndex(room, socketId);
+function buildLobbyState(room, clientId) {
+  const yourSlot = getPlayerIndexByClientId(room, clientId);
   return {
     roomCode: room.code,
     started: room.started,
     yourSlot,
     heroes: HERO_DEFS.map(hero => {
-      const socketAtSlot = room.sockets[hero.index];
+      const slot = room.players[hero.index];
       return {
         index: hero.index,
         label: hero.label,
-        taken: Boolean(socketAtSlot),
-        isYours: socketAtSlot === socketId
+        taken: Boolean(slot?.clientId),
+        isYours: slot?.clientId === clientId
       };
     })
   };
 }
 
 function emitLobbyState(room, io) {
-  const targets = new Set();
-  room.members.forEach(socketId => {
-    if (socketId) targets.add(socketId);
-  });
-  room.sockets.forEach(socketId => {
-    if (socketId) targets.add(socketId);
-  });
-
   for (const [socketId, socket] of io.sockets.sockets) {
     if (socket.data.roomCode === room.code) {
-      targets.add(socketId);
+      io.to(socketId).emit("lobbyState", buildLobbyState(room, socket.data.clientId));
     }
   }
-
-  targets.forEach(socketId => {
-    io.to(socketId).emit("lobbyState", buildLobbyState(room, socketId));
-  });
 }
 
 function tryStartRoom(room, io) {
   if (room.started) return;
-  if (room.sockets.some(socketId => !socketId)) return;
+  if (room.players.some(player => !player.clientId)) return;
   room.started = true;
   room.latestState = null;
-  room.sockets.forEach((socketId, index) => {
-    io.to(socketId).emit("matchStarted", {
+  room.players.forEach((player, index) => {
+    if (!player.socketId) return;
+    io.to(player.socketId).emit("matchStarted", {
       roomCode: room.code,
       isHost: index === 0,
       localPlayerIndex: index
@@ -150,9 +147,70 @@ function tryStartRoom(room, io) {
 
 function cleanupRoom(room) {
   if (!room) return;
-  if (room.members.size > 0) return;
-  if (room.sockets.some(Boolean)) return;
+  if (room.players.some(player => player.clientId || player.socketId)) return;
   rooms.delete(room.code);
+}
+
+function cancelDisconnectTimer(room, playerIndex) {
+  if (!room || playerIndex < 0) return;
+  const timer = room.disconnectTimers[playerIndex];
+  if (timer) {
+    clearTimeout(timer);
+    room.disconnectTimers[playerIndex] = null;
+  }
+}
+
+function attachSocketToRoomPlayer(room, socket, playerIndex, io) {
+  const player = room?.players?.[playerIndex];
+  if (!player) return false;
+  player.socketId = socket.id;
+  cancelDisconnectTimer(room, playerIndex);
+  socket.data.roomCode = room.code;
+  socket.join(room.code);
+  if (room.started) {
+    io.to(socket.id).emit("matchStarted", {
+      roomCode: room.code,
+      isHost: playerIndex === 0,
+      localPlayerIndex: playerIndex,
+      resumed: true
+    });
+    if (room.latestState) {
+      io.to(socket.id).emit("resumeState", room.latestState);
+    }
+  } else {
+    io.to(socket.id).emit("roomJoined", { roomCode: room.code, resumed: true });
+  }
+  emitLobbyState(room, io);
+  return true;
+}
+
+function tryRestoreSession(socket, io) {
+  const clientId = socket?.data?.clientId;
+  if (!clientId) return false;
+  for (const room of rooms.values()) {
+    const playerIndex = getPlayerIndexByClientId(room, clientId);
+    if (playerIndex === -1) continue;
+    return attachSocketToRoomPlayer(room, socket, playerIndex, io);
+  }
+  return false;
+}
+
+function finalizeDisconnect(room, playerIndex, io) {
+  const player = room?.players?.[playerIndex];
+  if (!player || player.socketId) return;
+  player.clientId = null;
+  room.latestState = null;
+  room.started = false;
+  room.disconnectTimers[playerIndex] = null;
+
+  room.players.forEach((otherPlayer, otherIndex) => {
+    if (otherIndex === playerIndex) return;
+    if (!otherPlayer.socketId) return;
+    io.to(otherPlayer.socketId).emit("roomError", { message: "Opponent disconnected. Match stopped." });
+  });
+
+  emitLobbyState(room, io);
+  cleanupRoom(room);
 }
 
 const server = http.createServer((req, res) => {
@@ -204,7 +262,10 @@ const io = new Server(server, {
 });
 
 io.on("connection", socket => {
-  socket.emit("lobbyState", buildEmptyLobbyState());
+  socket.data.clientId = String(socket.handshake.auth?.clientId || socket.id);
+  if (!tryRestoreSession(socket, io)) {
+    socket.emit("lobbyState", buildEmptyLobbyState());
+  }
 
   socket.on("createRoom", () => {
     let room = getRoomForSocket(socket);
@@ -213,11 +274,10 @@ io.on("connection", socket => {
       return;
     }
     room = createRoom();
-    room.members.add(socket.id);
     socket.data.roomCode = room.code;
     socket.join(room.code);
     io.to(socket.id).emit("roomCreated", { roomCode: room.code });
-    io.to(socket.id).emit("lobbyState", buildLobbyState(room, socket.id));
+    io.to(socket.id).emit("lobbyState", buildLobbyState(room, socket.data.clientId));
   });
 
   socket.on("joinRoom", payload => {
@@ -236,7 +296,6 @@ io.on("connection", socket => {
       io.to(socket.id).emit("roomError", { message: "Leave the current room first." });
       return;
     }
-    room.members.add(socket.id);
     socket.data.roomCode = room.code;
     socket.join(room.code);
     io.to(socket.id).emit("roomJoined", { roomCode: room.code });
@@ -258,16 +317,20 @@ io.on("connection", socket => {
       io.to(socket.id).emit("roomError", { message: "Invalid hero." });
       return;
     }
-    const currentIndex = getPlayerIndex(room, socket.id);
-    const occupant = room.sockets[heroIndex];
-    if (occupant && occupant !== socket.id) {
+    const currentIndex = getPlayerIndexByClientId(room, socket.data.clientId);
+    const occupant = room.players[heroIndex];
+    if (occupant?.clientId && occupant.clientId !== socket.data.clientId) {
       io.to(socket.id).emit("roomError", { message: "This hero is already taken." });
       return;
     }
     if (currentIndex !== -1) {
-      room.sockets[currentIndex] = null;
+      room.players[currentIndex].clientId = null;
+      room.players[currentIndex].socketId = null;
+      cancelDisconnectTimer(room, currentIndex);
     }
-    room.sockets[heroIndex] = socket.id;
+    room.players[heroIndex].clientId = socket.data.clientId;
+    room.players[heroIndex].socketId = socket.id;
+    cancelDisconnectTimer(room, heroIndex);
     emitLobbyState(room, io);
     tryStartRoom(room, io);
   });
@@ -275,7 +338,7 @@ io.on("connection", socket => {
   socket.on("clientAction", action => {
     const room = getRoomForSocket(socket);
     if (!room || !room.started) return;
-    const hostId = room.sockets[0];
+    const hostId = room.players[0]?.socketId;
     if (hostId) {
       io.to(hostId).emit("hostAction", action);
     }
@@ -303,21 +366,13 @@ io.on("connection", socket => {
     if (!room) return;
     const playerIndex = getPlayerIndex(room, socket.id);
     if (playerIndex !== -1) {
-      room.sockets[playerIndex] = null;
+      room.players[playerIndex].socketId = null;
+      cancelDisconnectTimer(room, playerIndex);
+      room.disconnectTimers[playerIndex] = setTimeout(() => {
+        finalizeDisconnect(room, playerIndex, io);
+      }, RECONNECT_GRACE_MS);
     }
-    room.members.delete(socket.id);
-    room.started = false;
-    room.latestState = null;
     socket.data.roomCode = null;
-
-    for (const [otherId, otherSocket] of io.sockets.sockets) {
-      if (otherId === socket.id) continue;
-      if (otherSocket.data.roomCode !== room.code) continue;
-      io.to(otherId).emit("roomError", { message: "Opponent left the room. Match stopped." });
-    }
-
-    emitLobbyState(room, io);
-    cleanupRoom(room);
   });
 });
 

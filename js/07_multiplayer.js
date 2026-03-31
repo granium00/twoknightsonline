@@ -1,7 +1,22 @@
 // ------------------------------------------------------------
 //   Online mode: lobby rooms + host authoritative match
 // ------------------------------------------------------------
-const socket = typeof io !== "undefined" ? io() : null;
+function getPersistentClientId() {
+  const fallback = `client-${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
+  try {
+    const existing = window.localStorage.getItem("twoknightsClientId");
+    if (existing) return existing;
+    window.localStorage.setItem("twoknightsClientId", fallback);
+    return fallback;
+  } catch (error) {
+    return fallback;
+  }
+}
+
+const persistentClientId = getPersistentClientId();
+const socket = typeof io !== "undefined"
+  ? io({ auth: { clientId: persistentClientId } })
+  : null;
 let isHost = false;
 let localPlayerIndex = null;
 let currentRoomCode = "";
@@ -172,6 +187,7 @@ function applyLobbyState(nextState) {
 }
 
 function showRoomError(message) {
+  pushDebugLog(`showRoomError:${message || "Room error."}`);
   setLobbyStatus(message || "Room error.");
   if (!onlineMatchStarted) {
     lockGameUi(true);
@@ -829,6 +845,27 @@ if (heroSlot1Btn && socket) {
 lockGameUi(Boolean(socket));
 
 if (socket) {
+  socket.on("connect", () => {
+    pushDebugLog(`connect:${socket.id}`);
+    markNetworkEvent("connect");
+    if (!onlineMatchStarted && !currentRoomCode) {
+      setLobbyStatus("Connected. Create a room or join an existing code.");
+    }
+    updateDebugOverlay();
+  });
+
+  socket.on("disconnect", reason => {
+    pushDebugLog(`disconnect:${reason || "unknown"}`);
+    markNetworkEvent("disconnect");
+    if (onlineMatchStarted) {
+      setLobbyStatus("Connection lost. Trying to reconnect to the match...");
+    } else {
+      setLobbyStatus("Connection lost. Trying to reconnect...");
+      lockGameUi(true);
+    }
+    updateDebugOverlay();
+  });
+
   socket.on("roomCreated", payload => {
     pushDebugLog(`roomCreated:${payload?.roomCode || "-"}`);
     markNetworkEvent("roomCreated");
@@ -906,6 +943,14 @@ if (socket) {
     lastStateUpdateAt = Date.now();
     pushDebugLog(`stateUpdate:turn=${state.currentPlayerIndex} moves=${state.movesRemaining}`);
     markNetworkEvent("stateUpdate");
+    applyState(state);
+  });
+
+  socket.on("resumeState", state => {
+    if (!state || applyingRemoteState) return;
+    lastStateUpdateAt = Date.now();
+    pushDebugLog(`resumeState:turn=${state.currentPlayerIndex} moves=${state.movesRemaining}`);
+    markNetworkEvent("resumeState");
     applyState(state);
   });
 
