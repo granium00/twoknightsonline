@@ -751,6 +751,13 @@ if (socket) {
     resetGameState();
     if (isHost) {
       setTimeout(() => emitStateNow(true), 0);
+      setTimeout(() => {
+        if (!onlineMatchStarted) return;
+        if (typeof tryAutoRoll === "function") {
+          tryAutoRoll();
+        }
+        emitStateNow(true);
+      }, 250);
     }
   });
 
