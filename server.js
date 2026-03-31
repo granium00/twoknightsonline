@@ -5,6 +5,11 @@ const { Server } = require("socket.io");
 
 const PORT = process.env.PORT || 3000;
 const ROOT = __dirname;
+const BUILD_VERSION =
+  process.env.RAILWAY_GIT_COMMIT_SHA ||
+  process.env.RAILWAY_DEPLOYMENT_ID ||
+  process.env.RAILWAY_PUBLIC_DOMAIN ||
+  "dev";
 
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -176,6 +181,18 @@ const server = http.createServer((req, res) => {
       headers.Pragma = "no-cache";
       headers.Expires = "0";
       headers["Surrogate-Control"] = "no-store";
+    }
+    if (ext === ".html") {
+      fs.readFile(filePath, "utf8", (readErr, html) => {
+        if (readErr) {
+          res.writeHead(500);
+          res.end("Failed to read html");
+          return;
+        }
+        res.writeHead(200, headers);
+        res.end(html.replaceAll("__BUILD_VERSION__", BUILD_VERSION));
+      });
+      return;
     }
     res.writeHead(200, headers);
     fs.createReadStream(filePath).pipe(res);
