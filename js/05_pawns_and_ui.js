@@ -417,6 +417,46 @@ players.forEach((_, index) => {
 });
 
 function showPickupToast(text, options = {}) {
+  const inOnlineMatch =
+    typeof socket !== "undefined" &&
+    socket &&
+    typeof onlineMatchStarted !== "undefined" &&
+    onlineMatchStarted;
+  const isSharedToast = shouldBroadcastSharedPickupToast(text);
+  let privateToastPlayerIndex = null;
+  if (Number.isInteger(options.privatePlayerIndex)) {
+    privateToastPlayerIndex = options.privatePlayerIndex;
+  } else if (
+    inOnlineMatch &&
+    typeof isHost !== "undefined" &&
+    isHost &&
+    typeof currentPrivateUiPlayerIndex === "number"
+  ) {
+    privateToastPlayerIndex = currentPrivateUiPlayerIndex;
+  } else if (
+    inOnlineMatch &&
+    typeof isHost !== "undefined" &&
+    isHost &&
+    typeof performingRemoteAction !== "undefined" &&
+    performingRemoteAction &&
+    typeof currentPlayerIndex === "number"
+  ) {
+    privateToastPlayerIndex = currentPlayerIndex;
+  }
+  if (
+    !options.skipBroadcast &&
+    !isSharedToast &&
+    inOnlineMatch &&
+    typeof isHost !== "undefined" &&
+    isHost &&
+    typeof localPlayerIndex === "number" &&
+    Number.isInteger(privateToastPlayerIndex) &&
+    privateToastPlayerIndex !== localPlayerIndex &&
+    typeof emitPrivateUiToPlayer === "function"
+  ) {
+    emitPrivateUiToPlayer(privateToastPlayerIndex, "showPickupToast", { text });
+    return;
+  }
   pickupText.textContent = text;
   pickupToast.style.display = "flex";
   if (toastTimer) clearTimeout(toastTimer);
@@ -424,13 +464,10 @@ function showPickupToast(text, options = {}) {
     pickupToast.style.display = "none";
   }, 2000);
   if (!options.skipBroadcast &&
-      shouldBroadcastSharedPickupToast(text) &&
-      typeof socket !== "undefined" &&
-      socket &&
+      isSharedToast &&
+      inOnlineMatch &&
       typeof isHost !== "undefined" &&
-      isHost &&
-      typeof onlineMatchStarted !== "undefined" &&
-      onlineMatchStarted) {
+      isHost) {
     socket.emit("sharedToast", { text });
   }
 }

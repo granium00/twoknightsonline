@@ -26,6 +26,7 @@ let applyingRemoteState = false;
 let lastStateFingerprint = "";
 let lastEmitAt = 0;
 let performingRemoteAction = false;
+let currentPrivateUiPlayerIndex = null;
 let onlineGamePaused = false;
 
 const lobbyOverlay = document.getElementById("lobbyOverlay");
@@ -844,151 +845,156 @@ function performPrivateUiAction(action) {
   const actionType = String(action?.actionType || "").trim();
   const playerIndex = Number(action?.playerIndex);
   const payload = action?.payload || {};
-  const clickBySelector = selector => {
-    const elem = document.querySelector(selector);
-    if (elem) elem.click();
-  };
-  if (modalType === "hire") {
-    if (Number.isInteger(playerIndex)) {
-      hirePlayerIndex = playerIndex;
+  currentPrivateUiPlayerIndex = Number.isInteger(playerIndex) ? playerIndex : null;
+  try {
+    const clickBySelector = selector => {
+      const elem = document.querySelector(selector);
+      if (elem) elem.click();
+    };
+    if (modalType === "hire") {
+      if (Number.isInteger(playerIndex)) {
+        hirePlayerIndex = playerIndex;
+      }
+      if (actionType === "buy" && typeof buyHireOption === "function") {
+        buyHireOption(payload.hireType);
+        return;
+      }
     }
-    if (actionType === "buy" && typeof buyHireOption === "function") {
-      buyHireOption(payload.hireType);
+    if (modalType === "castle") {
+      if (payload.key) {
+        castleModalKey = payload.key;
+      }
+      if (Number.isInteger(playerIndex)) {
+        castleModalPlayerIndex = playerIndex;
+      }
+      if (castleModalKey && Number.isInteger(castleModalPlayerIndex) && typeof refreshCastleModal === "function") {
+        refreshCastleModal(castleModalKey, castleModalPlayerIndex);
+      }
+      if (actionType === "buyFeature" && typeof buyCastleFeature === "function") {
+        buyCastleFeature(payload.featureKey);
+        return;
+      }
+      if (actionType === "buyBallista" && typeof buyCastleBallista === "function") {
+        buyCastleBallista();
+        return;
+      }
+      if (actionType === "buyBolt" && typeof buyCastleBolt === "function") {
+        buyCastleBolt();
+        return;
+      }
+      if (actionType === "depositArmy" && typeof depositCastleArmy === "function") {
+        depositCastleArmy(payload.amount);
+        return;
+      }
+      if (actionType === "withdrawArmy" && typeof withdrawCastleArmy === "function") {
+        withdrawCastleArmy(payload.amount);
+        return;
+      }
+      if (actionType === "upgrade" && typeof upgradeCastleLevel === "function") {
+        upgradeCastleLevel();
+      }
       return;
     }
-  }
-  if (modalType === "castle") {
-    if (payload.key) {
-      castleModalKey = payload.key;
-    }
-    if (Number.isInteger(playerIndex)) {
-      castleModalPlayerIndex = playerIndex;
-    }
-    if (castleModalKey && Number.isInteger(castleModalPlayerIndex) && typeof refreshCastleModal === "function") {
-      refreshCastleModal(castleModalKey, castleModalPlayerIndex);
-    }
-    if (actionType === "buyFeature" && typeof buyCastleFeature === "function") {
-      buyCastleFeature(payload.featureKey);
+    if (modalType === "barracks") {
+      if (Number.isInteger(playerIndex)) {
+        barracksPlayerIndex = playerIndex;
+      }
+      if (actionType === "buy" && payload.buyType) {
+        clickBySelector(`[data-buy="${payload.buyType}"]`);
+      }
       return;
     }
-    if (actionType === "buyBallista" && typeof buyCastleBallista === "function") {
-      buyCastleBallista();
+    if (modalType === "lavka") {
+      if (Number.isInteger(playerIndex)) {
+        lavkaPlayerIndex = playerIndex;
+      }
+      if (actionType === "buy" && payload.buyType) {
+        clickBySelector(`[data-lavka-buy="${payload.buyType}"]`);
+      }
       return;
     }
-    if (actionType === "buyBolt" && typeof buyCastleBolt === "function") {
-      buyCastleBolt();
+    if (modalType === "workshop") {
+      if (Number.isInteger(playerIndex)) {
+        workshopPlayerIndex = playerIndex;
+      }
+      if (actionType === "buy" && payload.buyType) {
+        clickBySelector(`[data-workshop-buy="${payload.buyType}"]`);
+      }
       return;
     }
-    if (actionType === "depositArmy" && typeof depositCastleArmy === "function") {
-      depositCastleArmy(payload.amount);
+    if (modalType === "city") {
+      if (Number.isInteger(playerIndex)) {
+        cityPlayerIndex = playerIndex;
+      }
+      if (actionType === "reward" && payload.rewardType) {
+        clickBySelector(`[data-city-reward="${payload.rewardType}"]`);
+        return;
+      }
+      if (actionType === "exchange" && payload.exchangeType) {
+        clickBySelector(`[data-city-exchange="${payload.exchangeType}"]`);
+        return;
+      }
+      if (actionType === "poison" && typeof handleCityPoisonUse === "function") {
+        handleCityPoisonUse();
+        return;
+      }
+    }
+    if (modalType === "master") {
+      if (Number.isInteger(playerIndex)) {
+        pendingMasterPlayerIndex = playerIndex;
+      }
+      if (actionType === "buyHilt") clickBySelector("#masterBuyHilt");
+      if (actionType === "buyGold") clickBySelector("#masterBuyGold");
+      if (actionType === "buyToken") clickBySelector("#masterBuyToken");
+      if (actionType === "buyGoldRainbow") clickBySelector("#masterBuyGoldRainbow");
+      if (actionType === "buyTerrorRing") clickBySelector("#masterBuyTerrorRing");
       return;
     }
-    if (actionType === "withdrawArmy" && typeof withdrawCastleArmy === "function") {
-      withdrawCastleArmy(payload.amount);
+    if (modalType === "mage") {
+      if (payload.mageId && typeof getMageSlotById === "function") {
+        pendingMageSlot = getMageSlotById(payload.mageId);
+      }
+      if (Number.isInteger(playerIndex)) {
+        pendingMagePlayerIndex = playerIndex;
+      }
+      if (actionType === "act" && payload.action) {
+        clickBySelector(`[data-mage-action="${payload.action}"]`);
+      }
       return;
     }
-    if (actionType === "upgrade" && typeof upgradeCastleLevel === "function") {
-      upgradeCastleLevel();
-    }
-    return;
-  }
-  if (modalType === "barracks") {
-    if (Number.isInteger(playerIndex)) {
-      barracksPlayerIndex = playerIndex;
-    }
-    if (actionType === "buy" && payload.buyType) {
-      clickBySelector(`[data-buy="${payload.buyType}"]`);
-    }
-    return;
-  }
-  if (modalType === "lavka") {
-    if (Number.isInteger(playerIndex)) {
-      lavkaPlayerIndex = playerIndex;
-    }
-    if (actionType === "buy" && payload.buyType) {
-      clickBySelector(`[data-lavka-buy="${payload.buyType}"]`);
-    }
-    return;
-  }
-  if (modalType === "workshop") {
-    if (Number.isInteger(playerIndex)) {
-      workshopPlayerIndex = playerIndex;
-    }
-    if (actionType === "buy" && payload.buyType) {
-      clickBySelector(`[data-workshop-buy="${payload.buyType}"]`);
-    }
-    return;
-  }
-  if (modalType === "city") {
-    if (Number.isInteger(playerIndex)) {
-      cityPlayerIndex = playerIndex;
-    }
-    if (actionType === "reward" && payload.rewardType) {
-      clickBySelector(`[data-city-reward="${payload.rewardType}"]`);
+    if (modalType === "stone") {
+      if (payload.key) {
+        pendingStoneKey = payload.key;
+      }
+      if (Number.isInteger(playerIndex)) {
+        pendingStonePlayerIndex = playerIndex;
+      }
+      if (actionType === "touch") {
+        clickBySelector("#stoneTouchBtn");
+      }
       return;
     }
-    if (actionType === "exchange" && payload.exchangeType) {
-      clickBySelector(`[data-city-exchange="${payload.exchangeType}"]`);
+    if (modalType === "repair") {
+      if (actionType === "confirm") {
+        clickBySelector("#repairConfirm");
+      }
       return;
     }
-    if (actionType === "poison" && typeof handleCityPoisonUse === "function") {
-      handleCityPoisonUse();
-      return;
+    if (modalType === "guard") {
+      if (payload.move) {
+        pendingGuardMove = payload.move;
+      }
+      if (Number.isInteger(playerIndex)) {
+        pendingGuardPlayerIndex = playerIndex;
+      }
+      if (actionType === "gold") clickBySelector("#guardBribeBtn");
+      if (actionType === "influence") clickBySelector("#guardInfluenceBtn");
+      if (actionType === "pass" && typeof handleGuardPass === "function") {
+        handleGuardPass();
+      }
     }
-  }
-  if (modalType === "master") {
-    if (Number.isInteger(playerIndex)) {
-      pendingMasterPlayerIndex = playerIndex;
-    }
-    if (actionType === "buyHilt") clickBySelector("#masterBuyHilt");
-    if (actionType === "buyGold") clickBySelector("#masterBuyGold");
-    if (actionType === "buyToken") clickBySelector("#masterBuyToken");
-    if (actionType === "buyGoldRainbow") clickBySelector("#masterBuyGoldRainbow");
-    if (actionType === "buyTerrorRing") clickBySelector("#masterBuyTerrorRing");
-    return;
-  }
-  if (modalType === "mage") {
-    if (payload.mageId && typeof getMageSlotById === "function") {
-      pendingMageSlot = getMageSlotById(payload.mageId);
-    }
-    if (Number.isInteger(playerIndex)) {
-      pendingMagePlayerIndex = playerIndex;
-    }
-    if (actionType === "act" && payload.action) {
-      clickBySelector(`[data-mage-action="${payload.action}"]`);
-    }
-    return;
-  }
-  if (modalType === "stone") {
-    if (payload.key) {
-      pendingStoneKey = payload.key;
-    }
-    if (Number.isInteger(playerIndex)) {
-      pendingStonePlayerIndex = playerIndex;
-    }
-    if (actionType === "touch") {
-      clickBySelector("#stoneTouchBtn");
-    }
-    return;
-  }
-  if (modalType === "repair") {
-    if (actionType === "confirm") {
-      clickBySelector("#repairConfirm");
-    }
-    return;
-  }
-  if (modalType === "guard") {
-    if (payload.move) {
-      pendingGuardMove = payload.move;
-    }
-    if (Number.isInteger(playerIndex)) {
-      pendingGuardPlayerIndex = playerIndex;
-    }
-    if (actionType === "gold") clickBySelector("#guardBribeBtn");
-    if (actionType === "influence") clickBySelector("#guardInfluenceBtn");
-    if (actionType === "pass" && typeof handleGuardPass === "function") {
-      handleGuardPass();
-    }
+  } finally {
+    currentPrivateUiPlayerIndex = null;
   }
 }
 
