@@ -34,8 +34,10 @@ const players = [
     terrorRingCount: 0,
     rainbowStoneCount: 0,
     heroHiltCount: 0,
+    trapStunCount: 0,
     stoneBonusRollsRemaining: 0,
     stunnedTurnsRemaining: 0,
+    stunSource: null,
     barbarianRewards: {r5: false, r10: false, r20: false}
   },
   {
@@ -69,8 +71,10 @@ const players = [
     terrorRingCount: 0,
     rainbowStoneCount: 0,
     heroHiltCount: 0,
+    trapStunCount: 0,
     stoneBonusRollsRemaining: 0,
     stunnedTurnsRemaining: 0,
+    stunSource: null,
     barbarianRewards: {r5: false, r10: false, r20: false}
   }
 ];
@@ -106,6 +110,8 @@ const POTION_INVIS_TURNS = 25;
 const POTION_LUCK_TURNS = 25;
 const BALLISTA_COST = 1000;
 const BOLT_COST = 150;
+const TRAP_STUN_COST = 150;
+const TRAP_STUN_DURATION = 5;
 const BALLISTA_RANGE = 11;
 const BALLISTA_DAMAGE_MIN = 13;
 const BALLISTA_DAMAGE_MAX = 17;
@@ -119,6 +125,7 @@ const INVENTORY_ITEMS = [
   {key: "token", label: "Жетон", icon: "token.png", count: player => player.tokenCount || 0},
   {key: "ballista", label: "Баллиста", icon: "ballista.png", count: player => player.ballistaCount || 0, useAction: "ballista"},
   {key: "bolt", label: "Болт", icon: "ballista_bolt.png", count: player => player.boltCount || 0},
+  {key: "trap-stun", label: "Ловушка-стан", icon: "poison.png", count: player => player.trapStunCount || 0, useAction: "trap-stun"},
   {key: "ring", label: "Кольцо убеждения", icon: "ring_persuasion.png", count: player => player.ringCount || 0},
   {key: "terror-ring", label: "Кольцо ужаса", icon: "ring_terror.png", count: player => player.terrorRingCount || 0},
   {key: "rainbow-stone", label: "Радужный камень", icon: "rainbow_stone.png", count: player => player.rainbowStoneCount || 0},
@@ -155,8 +162,73 @@ function applyPotion(playerIndex, type) {
     player.luckTurnsRemaining = Math.max(player.luckTurnsRemaining || 0, POTION_LUCK_TURNS);
     showPickupToast("Зелье удачи: +1.6 к ресурсам на 25 ходов.");
   }
+  if (type === "trap-stun") {
+    placeTrapStun(playerIndex);
+    return;
+  }
   updatePlayerResources(playerIndex);
   updateInventory(playerIndex);
+}
+
+function getTrapStunKeysForPlayer(playerIndex) {
+  const player = players[playerIndex];
+  if (!player) return [];
+  const anchorX = player.x;
+  const anchorY = player.y;
+  return [
+    `${anchorX},${anchorY}`,
+    `${anchorX - 1},${anchorY}`,
+    `${anchorX},${anchorY - 1}`,
+    `${anchorX - 1},${anchorY - 1}`
+  ];
+}
+
+function isTrapStunPlacementForbidden(key) {
+  const [x, y] = key.split(",").map(Number);
+  if (x < 0 || y < 0 || x >= COLS || y >= ROWS) return true;
+  if (blockedCellKeys.has(key)) return true;
+  if (nodeByPos[key]) return true;
+  if (typeof getCastleBaseKeyForPos === "function" && getCastleBaseKeyForPos(x, y)) return true;
+  if (typeof getDragonBaseKeyForPos === "function" && getDragonBaseKeyForPos(x, y)) return true;
+  if (typeof MASTER_CELL !== "undefined" && key === MASTER_CELL.key) return true;
+  if (typeof MAGE_POSITIONS !== "undefined" && Array.isArray(MAGE_POSITIONS) && MAGE_POSITIONS.some(pos => `${pos.x},${pos.y}` === key)) return true;
+  return false;
+}
+
+function placeTrapStun(playerIndex) {
+  const player = players[playerIndex];
+  if (!player) return false;
+  if ((player.trapStunCount || 0) <= 0) return false;
+  const trapKeys = getTrapStunKeysForPlayer(playerIndex);
+  if (trapKeys.some(isTrapStunPlacementForbidden)) {
+    showPickupToast("Здесь нельзя поставить ловушку-стан.");
+    return false;
+  }
+  const occupiedByEnemy = players.some((other, index) => {
+    if (!other || index === playerIndex) return false;
+    return trapKeys.includes(`${other.x},${other.y}`);
+  });
+  if (occupiedByEnemy) {
+    showPickupToast("Рядом слишком близко враг для установки ловушки.");
+    return false;
+  }
+  const duplicate = trapStunFields.some(field => field.ownerIndex === playerIndex && trapKeys.some(key => field.keys.includes(key)));
+  if (duplicate) {
+    showPickupToast("Здесь уже стоит ваша ловушка.");
+    return false;
+  }
+  player.trapStunCount -= 1;
+  trapStunFields.push({
+    id: trapStunIdCounter++,
+    ownerIndex: playerIndex,
+    anchorKey: `${player.x},${player.y}`,
+    keys: trapKeys.slice()
+  });
+  renderTrapStunFields();
+  updatePlayerResources(playerIndex);
+  updateInventory(playerIndex);
+  showPickupToast("Ловушка-стан установлена.");
+  return true;
 }
 
 function cancelBallistaMode(playerIndex) {
@@ -260,7 +332,8 @@ function shouldBroadcastSharedPickupToast(text) {
     "Радужный камень",
     "Тролли оглушили игрока",
     "не может атаковать: в кармане нет войск",
-    "Без меча героя нельзя вступить в бой с драконом."
+    "Без меча героя нельзя вступить в бой с драконом.",
+    "Ловушка-стан оглушила игрока"
   ];
   return sharedPatterns.some(pattern => text.includes(pattern));
 }
@@ -337,7 +410,18 @@ function updateInventory(playerIndex) {
         btn.addEventListener("click", () => cancelBallistaMode(playerIndex));
       } else {
         btn.textContent = "Применить";
-        btn.addEventListener("click", () => applyPotion(playerIndex, item.useAction));
+        btn.addEventListener("click", () => {
+          if (shouldRoutePrivateUiActionToHost(playerIndex)) {
+            emitPrivateUiActionToHost({
+              modalType: "inventory",
+              actionType: "use",
+              playerIndex,
+              payload: { useAction: item.useAction }
+            });
+            return;
+          }
+          applyPotion(playerIndex, item.useAction);
+        });
       }
       entry.appendChild(btn);
     }
@@ -3371,6 +3455,9 @@ function refreshCastleModal(key, playerIndex) {
   if (boltBuyBtn) {
     boltBuyBtn.disabled = !player || playerResources < BOLT_COST;
   }
+  if (trapStunBuyBtn) {
+    trapStunBuyBtn.disabled = !player || playerResources < TRAP_STUN_COST;
+  }
     castleFeatureButtons.forEach(btn => {
       const feature = btn.dataset.castleFeature;
       const def = CASTLE_FEATURES[feature];
@@ -3519,6 +3606,20 @@ function buyCastleBolt() {
   return true;
 }
 
+function buyCastleTrapStun() {
+  if (!castleModalKey || castleModalPlayerIndex === null) return false;
+  const player = players[castleModalPlayerIndex];
+  if (!player || player.resources.resources < TRAP_STUN_COST) return false;
+  player.resources.resources -= TRAP_STUN_COST;
+  player.trapStunCount = (player.trapStunCount || 0) + 1;
+  updatePlayerResources(castleModalPlayerIndex);
+  updateInventory(castleModalPlayerIndex);
+  refreshCastleModal(castleModalKey, castleModalPlayerIndex);
+  showPickupToast("Куплена ловушка-стан.");
+  flashPrice(trapStunBuyBtn, TRAP_STUN_COST, "assets/icons/icon-resources.png", "Ресурсы");
+  return true;
+}
+
 function depositCastleArmy(amount) {
   if (!castleModalKey || castleModalPlayerIndex === null) return false;
   const player = players[castleModalPlayerIndex];
@@ -3610,6 +3711,20 @@ function upgradeCastleLevel() {
         return;
       }
       buyCastleBolt();
+    });
+  }
+  if (trapStunBuyBtn) {
+    trapStunBuyBtn.addEventListener("click", () => {
+      if (shouldRoutePrivateUiActionToHost(castleModalPlayerIndex)) {
+        emitPrivateUiActionToHost({
+          modalType: "castle",
+          actionType: "buyTrapStun",
+          playerIndex: castleModalPlayerIndex,
+          payload: { key: castleModalKey }
+        });
+        return;
+      }
+      buyCastleTrapStun();
     });
   }
 
@@ -3879,9 +3994,6 @@ function tickAllTimedBuffs() {
     if (player.noDoubleTurnsRemaining > 0) {
       player.noDoubleTurnsRemaining = Math.max(0, player.noDoubleTurnsRemaining - 1);
     }
-    if (player.stunnedTurnsRemaining > 0) {
-      player.stunnedTurnsRemaining = Math.max(0, player.stunnedTurnsRemaining - 1);
-    }
     if (player.invisTurnsRemaining > 0) {
       player.invisTurnsRemaining = Math.max(0, player.invisTurnsRemaining - 1);
     }
@@ -3972,6 +4084,20 @@ function finalizeMove(gridX, gridY) {
   movesRemaining = 0;
   clearReachable();
   updatePawns();
+
+  const triggeredTrap = trapStunFields.find(field => field.ownerIndex !== currentPlayerIndex && field.keys.includes(key));
+  if (triggeredTrap) {
+    currentPlayer.stunnedTurnsRemaining = Math.max(currentPlayer.stunnedTurnsRemaining || 0, TRAP_STUN_DURATION);
+    currentPlayer.stunSource = "trap-stun";
+    removeTrapStunFieldById(triggeredTrap.id);
+    updatePlayerResources(currentPlayerIndex);
+    const trappedPlayerLabel = typeof currentPlayer.id === "number"
+      ? `игрока ${currentPlayer.id + 1}`
+      : `игрока ${currentPlayerIndex + 1}`;
+    showPickupToast(`Ловушка-стан оглушила ${trappedPlayerLabel} — пропуск 5 ходов.`);
+    endTurn();
+    return;
+  }
 
   const castleKey = getCastleBaseKeyForPos(gridX, gridY) || key;
   const node = nodeByPos[castleKey];
@@ -4291,7 +4417,10 @@ function doRoll() {
     const stunnedPlayerLabel = typeof currentPlayer.id === "number"
       ? `игрока ${currentPlayer.id + 1}`
       : `игрока ${currentPlayerIndex + 1}`;
-    showPickupToast(`Тролли оглушили ${stunnedPlayerLabel} — пропуск хода.`);
+    const stunText = currentPlayer.stunSource === "trap-stun"
+      ? `Ловушка-стан оглушила ${stunnedPlayerLabel} — пропуск хода.`
+      : `Тролли оглушили ${stunnedPlayerLabel} — пропуск хода.`;
+    showPickupToast(stunText);
     movesRemaining = 0;
     lastRoll = null;
     lastRollText = "-";
@@ -4299,6 +4428,10 @@ function doRoll() {
     extraTurnPending = false;
     extraTurnReason = null;
     justRolledDouble = false;
+    currentPlayer.stunnedTurnsRemaining = Math.max(0, (currentPlayer.stunnedTurnsRemaining || 0) - 1);
+    if (currentPlayer.stunnedTurnsRemaining <= 0) {
+      currentPlayer.stunSource = null;
+    }
     tickAllTimedBuffs();
     currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
     updateTurnUI();
@@ -4407,11 +4540,23 @@ function resetGameState() {
     player.terrorRingCount = 0;
     player.rainbowStoneCount = 0;
     player.heroHiltCount = 0;
+    player.trapStunCount = 0;
     player.stoneBonusRollsRemaining = 0;
     player.stunnedTurnsRemaining = 0;
+    player.stunSource = null;
     player.barbarianRewards = { r5: false, r10: false, r20: false };
     updatePlayerResources(index);
   });
+
+  if (typeof trapStunFields !== "undefined") {
+    trapStunFields.length = 0;
+  }
+  if (typeof trapStunIdCounter !== "undefined") {
+    trapStunIdCounter = 1;
+  }
+  if (typeof renderTrapStunFields === "function") {
+    renderTrapStunFields();
+  }
 
   guardAccess.forEach((_, index) => {
     guardAccess[index] = false;

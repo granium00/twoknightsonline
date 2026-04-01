@@ -260,6 +260,24 @@
       width: 234%;
       height: 234%;
     }
+    .trap-stun-marker {
+      position: absolute;
+      inset: 3px;
+      border: 2px dashed rgba(255, 99, 99, 0.9);
+      border-radius: 8px;
+      background: rgba(127, 29, 29, 0.18);
+      box-shadow: inset 0 0 0 1px rgba(255, 214, 214, 0.18);
+      pointer-events: none;
+      z-index: 26;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffe4e6;
+      font-size: 0.7rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
     .cell.flower {
       background: #2dd4bf;
       border-color: #14b8a6;

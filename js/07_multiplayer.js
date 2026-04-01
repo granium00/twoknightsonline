@@ -236,8 +236,10 @@ function buildState() {
       terrorRingCount: p.terrorRingCount,
       rainbowStoneCount: p.rainbowStoneCount,
       heroHiltCount: p.heroHiltCount,
+      trapStunCount: p.trapStunCount,
       stoneBonusRollsRemaining: p.stoneBonusRollsRemaining,
       stunnedTurnsRemaining: p.stunnedTurnsRemaining,
+      stunSource: p.stunSource,
       barbarianRewards: shallowClone(p.barbarianRewards)
     })),
     currentPlayerIndex,
@@ -329,6 +331,8 @@ function buildState() {
     thiefIdCounter,
     cutthroats: shallowClone(cutthroats),
     cutthroatIdCounter,
+    trapStunFields: shallowClone(trapStunFields),
+    trapStunIdCounter,
     lastBattleResult: shallowClone(lastBattleResult),
     lastBattleId,
     pendingTurnAdvance,
@@ -693,6 +697,24 @@ function applyState(state) {
   });
   cutthroatIdCounter = state.cutthroatIdCounter ?? cutthroatIdCounter;
 
+  if (typeof trapStunFields !== "undefined") {
+    trapStunFields.length = 0;
+    (state.trapStunFields || []).forEach(entry => {
+      trapStunFields.push({
+        id: entry.id,
+        ownerIndex: entry.ownerIndex,
+        anchorKey: entry.anchorKey,
+        keys: Array.isArray(entry.keys) ? entry.keys.slice() : []
+      });
+    });
+  }
+  if (typeof trapStunIdCounter !== "undefined") {
+    trapStunIdCounter = state.trapStunIdCounter ?? trapStunIdCounter;
+  }
+  if (typeof renderTrapStunFields === "function") {
+    renderTrapStunFields();
+  }
+
   clearReachable();
   reachableKeys = new Set(state.reachableKeys || []);
   showReachable();
@@ -897,13 +919,17 @@ function performPrivateUiAction(action) {
         buyCastleBallista();
         return;
       }
-      if (actionType === "buyBolt" && typeof buyCastleBolt === "function") {
-        buyCastleBolt();
-        return;
-      }
-      if (actionType === "depositArmy" && typeof depositCastleArmy === "function") {
-        depositCastleArmy(payload.amount);
-        return;
+    if (actionType === "buyBolt" && typeof buyCastleBolt === "function") {
+      buyCastleBolt();
+      return;
+    }
+    if (actionType === "buyTrapStun" && typeof buyCastleTrapStun === "function") {
+      buyCastleTrapStun();
+      return;
+    }
+    if (actionType === "depositArmy" && typeof depositCastleArmy === "function") {
+      depositCastleArmy(payload.amount);
+      return;
       }
       if (actionType === "withdrawArmy" && typeof withdrawCastleArmy === "function") {
         withdrawCastleArmy(payload.amount);
@@ -911,9 +937,15 @@ function performPrivateUiAction(action) {
       }
       if (actionType === "upgrade" && typeof upgradeCastleLevel === "function") {
         upgradeCastleLevel();
-      }
-      return;
     }
+    return;
+  }
+  if (modalType === "inventory") {
+    if (actionType === "use" && payload.useAction && typeof applyPotion === "function") {
+      applyPotion(playerIndex, payload.useAction);
+    }
+    return;
+  }
     if (modalType === "barracks") {
       if (Number.isInteger(playerIndex)) {
         barracksPlayerIndex = playerIndex;

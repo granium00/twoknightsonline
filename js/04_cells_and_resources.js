@@ -209,6 +209,8 @@ const RESOURCE_ICONS = {
 };
 const resourceByPos = {};
 const specialByPos = {};
+const trapStunFields = [];
+let trapStunIdCounter = 1;
 const SPAWN_BLOCKED_COORDINATES = [
   { x: 20, yStart: 23, yEnd: 25 },
   { x: 21, yStart: 21, yEnd: 25 },
@@ -652,6 +654,7 @@ function handleTrollsTurn() {
       } else {
         target.stunnedTurnsRemaining = 3;
       }
+      target.stunSource = "troll";
       trollState.stunUsed = true;
       const targetCave = TROLL_CAVES[trollState.targetCaveIndex];
       if (targetCave) {
@@ -793,6 +796,52 @@ function setSpecialCellDisabled(key, disabled) {
     cell.classList.remove("resource-disabled");
   }
   return true;
+}
+
+function clearTrapMarkerAt(key) {
+  const cell = grid[key];
+  const marker = cell?.querySelector(".trap-stun-marker");
+  if (marker) marker.remove();
+}
+
+function shouldRevealTrapStunField(ownerIndex) {
+  if (typeof socket === "undefined" || !socket) return true;
+  if (typeof onlineMatchStarted === "undefined" || !onlineMatchStarted) return true;
+  if (typeof localPlayerIndex !== "number") return false;
+  return ownerIndex === localPlayerIndex;
+}
+
+function renderTrapStunFields() {
+  Object.keys(grid).forEach(clearTrapMarkerAt);
+  trapStunFields.forEach(field => {
+    if (!shouldRevealTrapStunField(field.ownerIndex)) return;
+    (field.keys || []).forEach(key => {
+      const cell = grid[key];
+      if (!cell) return;
+      let marker = cell.querySelector(".trap-stun-marker");
+      if (!marker) {
+        marker = document.createElement("div");
+        marker.className = "trap-stun-marker";
+        cell.appendChild(marker);
+      }
+      marker.textContent = "СТАН";
+      const trapOwnerColor =
+        typeof players !== "undefined" &&
+        Array.isArray(players) &&
+        players[field.ownerIndex]
+          ? players[field.ownerIndex].color
+          : "rgba(255, 99, 99, 0.9)";
+      marker.style.borderColor = trapOwnerColor;
+    });
+  });
+}
+
+function removeTrapStunFieldById(id) {
+  const index = trapStunFields.findIndex(field => field.id === id);
+  if (index === -1) return null;
+  const [removed] = trapStunFields.splice(index, 1);
+  renderTrapStunFields();
+  return removed;
 }
 
 function isSpecialFeatureDisabled(ownerIndex, featureKey, sourceCastleKey = null) {
