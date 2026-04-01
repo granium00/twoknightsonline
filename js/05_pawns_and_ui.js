@@ -997,12 +997,8 @@ if (trollCaveModal) {
   });
 }
 
-function openMasterModal(playerIndex) {
+function syncMasterModalState(playerIndex) {
   if (!masterModal || !masterBuyHilt) return;
-  if (shouldDelegatePrivateUiToPlayer(playerIndex)) {
-    emitPrivateUiToPlayer(playerIndex, "showMasterModal", { playerIndex });
-    return;
-  }
   const player = players[playerIndex];
   const totalResources = getTotalResources(player);
   masterBuyHilt.disabled = !player || totalResources < 800;
@@ -1018,8 +1014,17 @@ function openMasterModal(playerIndex) {
   if (masterBuyTerrorRing) {
     masterBuyTerrorRing.disabled = !player || (player.ringCount || 0) <= 0;
   }
-  masterModal.style.display = "flex";
   pendingMasterPlayerIndex = playerIndex;
+}
+
+function openMasterModal(playerIndex) {
+  if (!masterModal || !masterBuyHilt) return;
+  if (shouldDelegatePrivateUiToPlayer(playerIndex)) {
+    emitPrivateUiToPlayer(playerIndex, "showMasterModal", { playerIndex });
+    return;
+  }
+  syncMasterModalState(playerIndex);
+  masterModal.style.display = "flex";
 }
 
 function closeMasterModal() {
@@ -1424,13 +1429,10 @@ function ensureSwordIconOnCastle(playerIndex) {
   return true;
 }
 
-function openBarracks(playerIndex) {
-  if (shouldDelegatePrivateUiToPlayer(playerIndex)) {
-    emitPrivateUiToPlayer(playerIndex, "showBarracksModal", { playerIndex });
-    return;
-  }
+function syncBarracksModalState(playerIndex) {
   barracksPlayerIndex = playerIndex;
   const player = players[playerIndex];
+  if (!player) return;
   const gold = getTotalGold(player);
   const cost50 = getDiscountedGoldCost(player, 2000);
   const cost130 = getDiscountedGoldCost(player, 4000);
@@ -1442,6 +1444,14 @@ function openBarracks(playerIndex) {
     if (type === "army-50") setTradePrice(btn, goldPriceHtml(cost50));
     if (type === "army-130") setTradePrice(btn, goldPriceHtml(cost130));
   });
+}
+
+function openBarracks(playerIndex) {
+  if (shouldDelegatePrivateUiToPlayer(playerIndex)) {
+    emitPrivateUiToPlayer(playerIndex, "showBarracksModal", { playerIndex });
+    return;
+  }
+  syncBarracksModalState(playerIndex);
   barracksModal.style.display = "flex";
 }
 
@@ -1495,13 +1505,10 @@ barracksButtons.forEach(btn => {
   });
 });
 
-function openLavka(playerIndex) {
-  if (shouldDelegatePrivateUiToPlayer(playerIndex)) {
-    emitPrivateUiToPlayer(playerIndex, "showLavkaModal", { playerIndex });
-    return;
-  }
+function syncLavkaModalState(playerIndex) {
   lavkaPlayerIndex = playerIndex;
   const player = players[playerIndex];
+  if (!player) return;
   const gold = getTotalGold(player);
   const cost50 = getDiscountedGoldCost(player, 800);
   const cost100 = getDiscountedGoldCost(player, 1200);
@@ -1518,6 +1525,14 @@ function openLavka(playerIndex) {
     if (type === "potion-invis") setTradePrice(btn, goldPriceHtml(costPotion));
     if (type === "potion-luck") setTradePrice(btn, goldPriceHtml(costPotion));
   });
+}
+
+function openLavka(playerIndex) {
+  if (shouldDelegatePrivateUiToPlayer(playerIndex)) {
+    emitPrivateUiToPlayer(playerIndex, "showLavkaModal", { playerIndex });
+    return;
+  }
+  syncLavkaModalState(playerIndex);
   lavkaModal.style.display = "flex";
 }
 

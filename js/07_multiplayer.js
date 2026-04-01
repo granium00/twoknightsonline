@@ -949,6 +949,9 @@ function performPrivateUiAction(action) {
     if (modalType === "barracks") {
       if (Number.isInteger(playerIndex)) {
         barracksPlayerIndex = playerIndex;
+        if (typeof syncBarracksModalState === "function") {
+          syncBarracksModalState(playerIndex);
+        }
       }
       if (actionType === "buy" && payload.buyType) {
         clickBySelector(`[data-buy="${payload.buyType}"]`);
@@ -958,6 +961,9 @@ function performPrivateUiAction(action) {
     if (modalType === "lavka") {
       if (Number.isInteger(playerIndex)) {
         lavkaPlayerIndex = playerIndex;
+        if (typeof syncLavkaModalState === "function") {
+          syncLavkaModalState(playerIndex);
+        }
       }
       if (actionType === "buy" && payload.buyType) {
         clickBySelector(`[data-lavka-buy="${payload.buyType}"]`);
@@ -999,6 +1005,9 @@ function performPrivateUiAction(action) {
     if (modalType === "master") {
       if (Number.isInteger(playerIndex)) {
         pendingMasterPlayerIndex = playerIndex;
+        if (typeof syncMasterModalState === "function") {
+          syncMasterModalState(playerIndex);
+        }
       }
       if (actionType === "buyHilt") clickBySelector("#masterBuyHilt");
       if (actionType === "buyGold") clickBySelector("#masterBuyGold");
@@ -1013,6 +1022,9 @@ function performPrivateUiAction(action) {
       }
       if (Number.isInteger(playerIndex)) {
         pendingMagePlayerIndex = playerIndex;
+        if (typeof updateMageActionButtons === "function") {
+          updateMageActionButtons(playerIndex);
+        }
       }
       if (actionType === "act" && payload.action) {
         clickBySelector(`[data-mage-action="${payload.action}"]`);
