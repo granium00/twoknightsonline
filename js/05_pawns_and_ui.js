@@ -571,6 +571,10 @@ function getOpponentIndex(playerIndex) {
 
 function openMageModal(slot, playerIndex) {
   if (!mageModal || !slot) return;
+  if (shouldDelegatePrivateUiToPlayer(playerIndex)) {
+    emitPrivateUiToPlayer(playerIndex, "showMageModal", { mageId: slot.id, playerIndex });
+    return;
+  }
   pendingMageSlot = slot;
   pendingMagePlayerIndex = playerIndex;
   updateMageActionButtons(playerIndex);
@@ -662,6 +666,15 @@ function handleMageAction(action) {
 
 mageActionButtons.forEach(btn => {
   btn.addEventListener("click", () => {
+    if (shouldRoutePrivateUiActionToHost(pendingMagePlayerIndex)) {
+      emitPrivateUiActionToHost({
+        modalType: "mage",
+        actionType: "act",
+        playerIndex: pendingMagePlayerIndex,
+        payload: { action: btn.dataset.mageAction, mageId: pendingMageSlot?.id ?? null }
+      });
+      return;
+    }
     handleMageAction(btn.dataset.mageAction);
   });
 });
@@ -680,6 +693,10 @@ if (mageModal) {
 
 function openStoneModal(key, playerIndex) {
   if (!stoneModal) return;
+  if (shouldDelegatePrivateUiToPlayer(playerIndex)) {
+    emitPrivateUiToPlayer(playerIndex, "showStoneModal", { key, playerIndex });
+    return;
+  }
   pendingStoneKey = key;
   pendingStonePlayerIndex = playerIndex;
   stoneModal.style.display = "flex";
@@ -692,7 +709,11 @@ function closeStoneModal() {
   stoneModal.style.display = "none";
 }
 
-function openStoneResultModal(text) {
+function openStoneResultModal(text, playerIndex = currentPlayerIndex) {
+  if (shouldDelegatePrivateUiToPlayer(playerIndex)) {
+    emitPrivateUiToPlayer(playerIndex, "showStoneResultModal", { text, playerIndex });
+    return;
+  }
   if (!stoneResultModal || !stoneResultText) return;
   stoneResultText.textContent = text;
   stoneResultModal.style.display = "flex";
@@ -734,31 +755,31 @@ function applyStoneEffect(playerIndex) {
   if (choice === "gold") {
     player.pocket.gold += 500;
     updatePlayerResources(playerIndex);
-    openStoneResultModal("Вы получили 500 золота в карман.");
+    openStoneResultModal("Вы получили 500 золота в карман.", playerIndex);
     return;
   }
   if (choice === "influence") {
     player.resources.influence += 150;
     updatePlayerResources(playerIndex);
-    openStoneResultModal("Вы получили 150 влияния.");
+    openStoneResultModal("Вы получили 150 влияния.", playerIndex);
     return;
   }
   if (choice === "army") {
     player.pocket.army += 15;
     updatePlayerResources(playerIndex);
-    openStoneResultModal("Люди тянутся к вам: вы получили 15 войск в карман.");
+    openStoneResultModal("Люди тянутся к вам: вы получили 15 войск в карман.", playerIndex);
     return;
   }
   if (choice === "ring") {
     player.ringCount = (player.ringCount || 0) + 1;
     updatePlayerResources(playerIndex);
-    openStoneResultModal("Камень раскалывается, и вы находите Кольцо убеждения.");
+    openStoneResultModal("Камень раскалывается, и вы находите Кольцо убеждения.", playerIndex);
     return;
   }
   if (choice === "slow-curse") {
     player.slowTurnsRemaining = Math.max(player.slowTurnsRemaining || 0, 12);
     updatePlayerResources(playerIndex);
-    openStoneResultModal("На вас проклятие замедления: -3 к броску на 12 ходов.");
+    openStoneResultModal("На вас проклятие замедления: -3 к броску на 12 ходов.", playerIndex);
     return;
   }
   if (choice === "plague") {
@@ -783,16 +804,25 @@ function applyStoneEffect(playerIndex) {
     updatePlayerResources(playerIndex);
     openStoneResultModal(lost > 0
       ? `Чума постигла ваши войска: потеряно ${lost} войск.`
-      : "Чума постигла ваши войска, но потерь нет.");
+      : "Чума постигла ваши войска, но потерь нет.", playerIndex);
     return;
   }
   player.stoneBonusRollsRemaining = 5;
   updatePlayerResources(playerIndex);
-  openStoneResultModal("Вы ходите 5 раз подряд.");
+  openStoneResultModal("Вы ходите 5 раз подряд.", playerIndex);
 }
 
 if (stoneTouchBtn) {
   stoneTouchBtn.addEventListener("click", () => {
+    if (shouldRoutePrivateUiActionToHost(pendingStonePlayerIndex)) {
+      emitPrivateUiActionToHost({
+        modalType: "stone",
+        actionType: "touch",
+        playerIndex: pendingStonePlayerIndex,
+        payload: { key: pendingStoneKey }
+      });
+      return;
+    }
     if (pendingStoneKey) {
       clearStone(pendingStoneKey);
     }
@@ -841,6 +871,10 @@ if (trollCaveModal) {
 
 function openMasterModal(playerIndex) {
   if (!masterModal || !masterBuyHilt) return;
+  if (shouldDelegatePrivateUiToPlayer(playerIndex)) {
+    emitPrivateUiToPlayer(playerIndex, "showMasterModal", { playerIndex });
+    return;
+  }
   const player = players[playerIndex];
   const totalResources = getTotalResources(player);
   masterBuyHilt.disabled = !player || totalResources < 800;
@@ -868,6 +902,10 @@ function closeMasterModal() {
 
 if (masterBuyHilt) {
   masterBuyHilt.addEventListener("click", () => {
+    if (shouldRoutePrivateUiActionToHost(pendingMasterPlayerIndex)) {
+      emitPrivateUiActionToHost({ modalType: "master", actionType: "buyHilt", playerIndex: pendingMasterPlayerIndex });
+      return;
+    }
     if (pendingMasterPlayerIndex === null) return;
     const player = players[pendingMasterPlayerIndex];
     if (!player) return;
@@ -883,6 +921,10 @@ if (masterBuyHilt) {
 
 if (masterBuyGold) {
   masterBuyGold.addEventListener("click", () => {
+    if (shouldRoutePrivateUiActionToHost(pendingMasterPlayerIndex)) {
+      emitPrivateUiActionToHost({ modalType: "master", actionType: "buyGold", playerIndex: pendingMasterPlayerIndex });
+      return;
+    }
     if (pendingMasterPlayerIndex === null) return;
     const player = players[pendingMasterPlayerIndex];
     if (!player) return;
@@ -898,6 +940,10 @@ if (masterBuyGold) {
 
 if (masterBuyToken) {
   masterBuyToken.addEventListener("click", () => {
+    if (shouldRoutePrivateUiActionToHost(pendingMasterPlayerIndex)) {
+      emitPrivateUiActionToHost({ modalType: "master", actionType: "buyToken", playerIndex: pendingMasterPlayerIndex });
+      return;
+    }
     if (pendingMasterPlayerIndex === null) return;
     const player = players[pendingMasterPlayerIndex];
     if (!player) return;
@@ -912,6 +958,10 @@ if (masterBuyToken) {
 
 if (masterBuyGoldRainbow) {
   masterBuyGoldRainbow.addEventListener("click", () => {
+    if (shouldRoutePrivateUiActionToHost(pendingMasterPlayerIndex)) {
+      emitPrivateUiActionToHost({ modalType: "master", actionType: "buyGoldRainbow", playerIndex: pendingMasterPlayerIndex });
+      return;
+    }
     if (pendingMasterPlayerIndex === null) return;
     const player = players[pendingMasterPlayerIndex];
     if (!player || (player.rainbowStoneCount || 0) <= 0) return;
@@ -925,6 +975,10 @@ if (masterBuyGoldRainbow) {
 
 if (masterBuyTerrorRing) {
   masterBuyTerrorRing.addEventListener("click", () => {
+    if (shouldRoutePrivateUiActionToHost(pendingMasterPlayerIndex)) {
+      emitPrivateUiActionToHost({ modalType: "master", actionType: "buyTerrorRing", playerIndex: pendingMasterPlayerIndex });
+      return;
+    }
     if (pendingMasterPlayerIndex === null) return;
     const player = players[pendingMasterPlayerIndex];
     if (!player || (player.ringCount || 0) <= 0) return;
@@ -1243,6 +1297,10 @@ function ensureSwordIconOnCastle(playerIndex) {
 }
 
 function openBarracks(playerIndex) {
+  if (shouldDelegatePrivateUiToPlayer(playerIndex)) {
+    emitPrivateUiToPlayer(playerIndex, "showBarracksModal", { playerIndex });
+    return;
+  }
   barracksPlayerIndex = playerIndex;
   const player = players[playerIndex];
   const gold = getTotalGold(player);
@@ -1271,6 +1329,15 @@ barracksModal.addEventListener("click", (e) => {
 
 barracksButtons.forEach(btn => {
   btn.addEventListener("click", () => {
+    if (shouldRoutePrivateUiActionToHost(barracksPlayerIndex)) {
+      emitPrivateUiActionToHost({
+        modalType: "barracks",
+        actionType: "buy",
+        playerIndex: barracksPlayerIndex,
+        payload: { buyType: btn.getAttribute("data-buy") }
+      });
+      return;
+    }
     if (barracksPlayerIndex === null) return;
     const player = players[barracksPlayerIndex];
     const type = btn.getAttribute("data-buy");
@@ -1301,6 +1368,10 @@ barracksButtons.forEach(btn => {
 });
 
 function openLavka(playerIndex) {
+  if (shouldDelegatePrivateUiToPlayer(playerIndex)) {
+    emitPrivateUiToPlayer(playerIndex, "showLavkaModal", { playerIndex });
+    return;
+  }
   lavkaPlayerIndex = playerIndex;
   const player = players[playerIndex];
   const gold = getTotalGold(player);
@@ -1334,6 +1405,15 @@ lavkaModal.addEventListener("click", (e) => {
 
 lavkaButtons.forEach(btn => {
   btn.addEventListener("click", () => {
+    if (shouldRoutePrivateUiActionToHost(lavkaPlayerIndex)) {
+      emitPrivateUiActionToHost({
+        modalType: "lavka",
+        actionType: "buy",
+        playerIndex: lavkaPlayerIndex,
+        payload: { buyType: btn.getAttribute("data-lavka-buy") }
+      });
+      return;
+    }
     if (lavkaPlayerIndex === null) return;
     const player = players[lavkaPlayerIndex];
     const type = btn.getAttribute("data-lavka-buy");
@@ -1382,6 +1462,10 @@ lavkaButtons.forEach(btn => {
 });
 
 function openWorkshop(playerIndex) {
+  if (shouldDelegatePrivateUiToPlayer(playerIndex)) {
+    emitPrivateUiToPlayer(playerIndex, "showWorkshopModal", { playerIndex });
+    return;
+  }
   workshopPlayerIndex = playerIndex;
   const player = players[playerIndex];
   const gold = getTotalGold(player);
@@ -1418,6 +1502,15 @@ workshopModal.addEventListener("click", (e) => {
 
 workshopButtons.forEach(btn => {
   btn.addEventListener("click", () => {
+    if (shouldRoutePrivateUiActionToHost(workshopPlayerIndex)) {
+      emitPrivateUiActionToHost({
+        modalType: "workshop",
+        actionType: "buy",
+        playerIndex: workshopPlayerIndex,
+        payload: { buyType: btn.getAttribute("data-workshop-buy") }
+      });
+      return;
+    }
     if (workshopPlayerIndex === null) return;
     const player = players[workshopPlayerIndex];
     const type = btn.getAttribute("data-workshop-buy");
@@ -1786,6 +1879,14 @@ function openRepairModal(entry, playerIndex) {
       cost = 150;
     label = "глиняный карьер";
   }
+  repairPending = { key: entry.key || `${entry.x},${entry.y}`, cost, playerIndex, entry };
+  if (shouldDelegatePrivateUiToPlayer(playerIndex)) {
+    emitPrivateUiToPlayer(playerIndex, "showRepairModal", {
+      playerIndex,
+      entry: { ...entry, key: entry.key || `${entry.x},${entry.y}` }
+    });
+    return;
+  }
   const player = players[playerIndex];
   const total = getTotalResources(player);
   if (repairText) {
@@ -1794,7 +1895,6 @@ function openRepairModal(entry, playerIndex) {
   setTradePrice(repairConfirm, `<img class="price-icon" src="assets/icons/icon-resources.png" alt="Ресурсы" />Цена: ${cost} ресурсов`);
   repairConfirm.disabled = total < cost;
   repairModal.style.display = "flex";
-  repairPending = { key: entry.key || `${entry.x},${entry.y}`, cost, playerIndex, entry };
 }
 
 function closeRepairModal() {
@@ -1812,6 +1912,15 @@ if (repairModal) {
 }
   if (repairConfirm) {
   repairConfirm.addEventListener("click", () => {
+    if (shouldRoutePrivateUiActionToHost(repairPending?.playerIndex)) {
+      emitPrivateUiActionToHost({
+        modalType: "repair",
+        actionType: "confirm",
+        playerIndex: repairPending?.playerIndex,
+        payload: { key: repairPending?.key || null }
+      });
+      return;
+    }
     if (!repairPending) return;
     const player = players[repairPending.playerIndex];
     if (!player) return;
@@ -2216,6 +2325,10 @@ function advanceThieves() {
 }
 
 function openCity(playerIndex) {
+  if (shouldDelegatePrivateUiToPlayer(playerIndex)) {
+    emitPrivateUiToPlayer(playerIndex, "showCityModal", { playerIndex });
+    return;
+  }
   const player = players[playerIndex];
   if (!player) return;
   const totalGold = (player.resources.gold || 0) + (player.pocket.gold || 0);
@@ -2268,6 +2381,15 @@ cityModal.addEventListener("click", (e) => {
 
 cityRewardButtons.forEach(btn => {
   btn.addEventListener("click", () => {
+    if (shouldRoutePrivateUiActionToHost(cityPlayerIndex)) {
+      emitPrivateUiActionToHost({
+        modalType: "city",
+        actionType: "reward",
+        playerIndex: cityPlayerIndex,
+        payload: { rewardType: btn.getAttribute("data-city-reward") }
+      });
+      return;
+    }
     if (cityPlayerIndex === null) return;
     const player = players[cityPlayerIndex];
     const amount = btn.getAttribute("data-city-reward");
@@ -2293,6 +2415,15 @@ cityRewardButtons.forEach(btn => {
 
 cityExchangeButtons.forEach(btn => {
   btn.addEventListener("click", () => {
+    if (shouldRoutePrivateUiActionToHost(cityPlayerIndex)) {
+      emitPrivateUiActionToHost({
+        modalType: "city",
+        actionType: "exchange",
+        playerIndex: cityPlayerIndex,
+        payload: { exchangeType: btn.getAttribute("data-city-exchange") }
+      });
+      return;
+    }
     if (cityPlayerIndex === null) return;
     const player = players[cityPlayerIndex];
     const amount = btn.getAttribute("data-city-exchange");
@@ -2336,7 +2467,13 @@ function handleCityPoisonUse() {
 }
 
 if (cityPoisonBtn) {
-  cityPoisonBtn.addEventListener("click", handleCityPoisonUse);
+  cityPoisonBtn.addEventListener("click", () => {
+    if (shouldRoutePrivateUiActionToHost(cityPlayerIndex)) {
+      emitPrivateUiActionToHost({ modalType: "city", actionType: "poison", playerIndex: cityPlayerIndex });
+      return;
+    }
+    handleCityPoisonUse();
+  });
 }
 
 function updateGuardModalButtons(playerIndex, unlocked) {
@@ -2348,6 +2485,10 @@ function updateGuardModalButtons(playerIndex, unlocked) {
 }
 
 function showGuardModalFor(playerIndex, x, y, unlocked) {
+  if (shouldDelegatePrivateUiToPlayer(playerIndex)) {
+    emitPrivateUiToPlayer(playerIndex, "showGuardModal", { playerIndex, x, y, unlocked: Boolean(unlocked) });
+    return;
+  }
   pendingGuardMove = {x, y};
   pendingGuardPlayerIndex = playerIndex;
   updateGuardModalButtons(playerIndex, Boolean(unlocked));
@@ -2360,7 +2501,7 @@ function hideGuardModal() {
   pendingGuardPlayerIndex = null;
 }
 
-  function handleGuardDecision(type) {
+function handleGuardDecision(type) {
     if (!pendingGuardMove || pendingGuardPlayerIndex === null) return;
     const player = players[pendingGuardPlayerIndex];
     if (!player) return;
@@ -2379,15 +2520,35 @@ function hideGuardModal() {
     const move = pendingGuardMove;
     hideGuardModal();
     finalizeMove(move.x, move.y);
-  }
+}
 
-  guardBribeBtn.addEventListener("click", () => handleGuardDecision("gold"));
-  guardInfluenceBtn.addEventListener("click", () => handleGuardDecision("influence"));
+function handleGuardPass() {
+  if (!pendingGuardMove || pendingGuardPlayerIndex === null) return;
+  const move = pendingGuardMove;
+  hideGuardModal();
+  finalizeMove(move.x, move.y);
+}
+
+  guardBribeBtn.addEventListener("click", () => {
+    if (shouldRoutePrivateUiActionToHost(pendingGuardPlayerIndex)) {
+      emitPrivateUiActionToHost({ modalType: "guard", actionType: "gold", playerIndex: pendingGuardPlayerIndex, payload: { move: pendingGuardMove } });
+      return;
+    }
+    handleGuardDecision("gold");
+  });
+  guardInfluenceBtn.addEventListener("click", () => {
+    if (shouldRoutePrivateUiActionToHost(pendingGuardPlayerIndex)) {
+      emitPrivateUiActionToHost({ modalType: "guard", actionType: "influence", playerIndex: pendingGuardPlayerIndex, payload: { move: pendingGuardMove } });
+      return;
+    }
+    handleGuardDecision("influence");
+  });
   guardPassBtn.addEventListener("click", () => {
-    if (!pendingGuardMove || pendingGuardPlayerIndex === null) return;
-    const move = pendingGuardMove;
-    hideGuardModal();
-    finalizeMove(move.x, move.y);
+    if (shouldRoutePrivateUiActionToHost(pendingGuardPlayerIndex)) {
+      emitPrivateUiActionToHost({ modalType: "guard", actionType: "pass", playerIndex: pendingGuardPlayerIndex, payload: { move: pendingGuardMove } });
+      return;
+    }
+    handleGuardPass();
   });
   guardModalCancel.addEventListener("click", hideGuardModal);
   guardModal.addEventListener("click", (event) => {
