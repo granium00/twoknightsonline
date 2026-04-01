@@ -31,6 +31,7 @@ game.addEventListener("click", e => {
     return;
   }
   if (!reachableKeys.has(key)) return;
+  clearReachable();
   const mercenaryTarget = getMercenaryAtKey(key);
   if (mercenaryTarget) {
     if (currentPlayer.pocket.army <= 0) {

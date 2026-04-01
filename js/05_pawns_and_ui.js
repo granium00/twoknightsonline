@@ -3739,6 +3739,7 @@ function finalizeMove(gridX, gridY) {
   currentPlayer.x = gridX;
   currentPlayer.y = gridY;
   movesRemaining = 0;
+  clearReachable();
   updatePawns();
 
   const castleKey = getCastleBaseKeyForPos(gridX, gridY) || key;
