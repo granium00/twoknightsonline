@@ -967,6 +967,9 @@ function performPrivateUiAction(action) {
     if (modalType === "workshop") {
       if (Number.isInteger(playerIndex)) {
         workshopPlayerIndex = playerIndex;
+        if (typeof syncWorkshopModalState === "function") {
+          syncWorkshopModalState(playerIndex);
+        }
       }
       if (actionType === "buy" && payload.buyType) {
         clickBySelector(`[data-workshop-buy="${payload.buyType}"]`);

@@ -1589,13 +1589,10 @@ lavkaButtons.forEach(btn => {
   });
 });
 
-function openWorkshop(playerIndex) {
-  if (shouldDelegatePrivateUiToPlayer(playerIndex)) {
-    emitPrivateUiToPlayer(playerIndex, "showWorkshopModal", { playerIndex });
-    return;
-  }
-  workshopPlayerIndex = playerIndex;
+function syncWorkshopModalState(playerIndex) {
   const player = players[playerIndex];
+  if (!player) return;
+  workshopPlayerIndex = playerIndex;
   const gold = getTotalGold(player);
   const costArmor = getDiscountedGoldCost(player, 1500);
   const costSword = getDiscountedGoldCost(player, 2500);
@@ -1615,6 +1612,14 @@ function openWorkshop(playerIndex) {
       );
     }
   });
+}
+
+function openWorkshop(playerIndex) {
+  if (shouldDelegatePrivateUiToPlayer(playerIndex)) {
+    emitPrivateUiToPlayer(playerIndex, "showWorkshopModal", { playerIndex });
+    return;
+  }
+  syncWorkshopModalState(playerIndex);
   workshopModal.style.display = "flex";
 }
 
