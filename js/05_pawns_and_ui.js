@@ -291,6 +291,15 @@ function shouldRoutePrivateUiActionToHost(playerIndex) {
     typeof emitPrivateUiActionToHost === "function";
 }
 
+function showPrivatePickupToastForPlayer(playerIndex, text) {
+  if (!text) return;
+  if (shouldDelegatePrivateUiToPlayer(playerIndex)) {
+    emitPrivateUiToPlayer(playerIndex, "showPickupToast", { text });
+    return;
+  }
+  showPickupToast(text);
+}
+
 function updateInventory(playerIndex) {
   const panel = inventoryPanels[playerIndex];
   const player = players[playerIndex];

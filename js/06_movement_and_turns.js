@@ -79,7 +79,7 @@ game.addEventListener("click", e => {
     const playerPosKey = `${currentPlayer.x},${currentPlayer.y}`;
     const nearGuard = guardApproachKeys.has(playerPosKey);
     if (!guardAccess[currentPlayerIndex] && !nearGuard) {
-      showPickupToast("Подойдите ближе к страже!");
+      showPrivatePickupToastForPlayer(currentPlayerIndex, "Подойдите ближе к страже!");
       return;
     }
     if (!guardAccess[currentPlayerIndex]) {

@@ -1104,6 +1104,10 @@ if (socket) {
       showBattleModal(payload.result, true);
       return;
     }
+    if (type === "showPickupToast" && typeof showPickupToast === "function") {
+      showPickupToast(String(payload.text || ""), { skipBroadcast: true });
+      return;
+    }
     if (type === "showCastleModal" && typeof showCastleModal === "function") {
       showCastleModal(payload.key, payload.playerIndex);
       return;
