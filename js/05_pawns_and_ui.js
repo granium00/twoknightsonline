@@ -388,6 +388,10 @@ function updateInventory(playerIndex) {
     itemsRoot.appendChild(hidden);
     return;
   }
+  const canUseInventoryItems =
+    !(typeof socket !== "undefined" && socket && typeof onlineMatchStarted !== "undefined" && onlineMatchStarted) ||
+    typeof localPlayerIndex !== "number" ||
+    localPlayerIndex === playerIndex;
   INVENTORY_ITEMS.forEach(item => {
     const count = item.count ? item.count(player) : 0;
     if (!count) return;
@@ -401,7 +405,7 @@ function updateInventory(playerIndex) {
     label.textContent = count > 1 ? `${item.label} ×${count}` : item.label;
     entry.appendChild(icon);
     entry.appendChild(label);
-    if (item.useAction) {
+    if (item.useAction && canUseInventoryItems) {
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "inventory-use";

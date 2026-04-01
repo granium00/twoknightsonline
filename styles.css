@@ -270,8 +270,8 @@
       overflow: visible;
     }
     .trap-stun-field-icon {
-      width: 100%;
-      height: 100%;
+      width: 120%;
+      height: 120%;
       object-fit: contain;
       filter: drop-shadow(0 0 14px rgba(127, 29, 29, 0.55));
       opacity: 0.96;
