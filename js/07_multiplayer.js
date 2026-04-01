@@ -26,10 +26,14 @@ let applyingRemoteState = false;
 let lastStateFingerprint = "";
 let lastEmitAt = 0;
 let performingRemoteAction = false;
+let onlineGamePaused = false;
 
 const lobbyOverlay = document.getElementById("lobbyOverlay");
 const lobbyStatusText = document.getElementById("lobbyStatusText");
 const resetLobbyBtn = document.getElementById("resetLobbyBtn");
+const pauseGameBtn = document.getElementById("pauseGameBtn");
+const pauseOverlay = document.getElementById("pauseOverlay");
+const resumeGameBtn = document.getElementById("resumeGameBtn");
 const heroSlot0Btn = document.getElementById("heroSlot0Btn");
 const heroSlot1Btn = document.getElementById("heroSlot1Btn");
 const heroSlot0Status = document.getElementById("heroSlot0Status");
@@ -112,6 +116,19 @@ function lockGameUi(locked) {
     lobbyOverlay.style.display = locked ? "flex" : "none";
   }
   updateDebugOverlay();
+}
+
+function applyPauseState(paused) {
+  onlineGamePaused = Boolean(paused);
+  if (pauseOverlay) {
+    pauseOverlay.style.display = onlineGamePaused ? "flex" : "none";
+  }
+  if (pauseGameBtn) {
+    pauseGameBtn.textContent = onlineGamePaused ? "НА ПАУЗЕ" : "ПАУЗА";
+  }
+  if (typeof refreshTurnControls === "function") {
+    refreshTurnControls();
+  }
 }
 
 function setLobbyStatus(text) {
@@ -949,6 +966,19 @@ if (resetLobbyBtn && socket) {
   });
 }
 
+if (pauseGameBtn && socket) {
+  pauseGameBtn.addEventListener("click", () => {
+    if (!onlineMatchStarted) return;
+    socket.emit("togglePause", { paused: true });
+  });
+}
+
+if (resumeGameBtn && socket) {
+  resumeGameBtn.addEventListener("click", () => {
+    socket.emit("togglePause", { paused: false });
+  });
+}
+
 lockGameUi(Boolean(socket));
 
 if (socket) {
@@ -994,6 +1024,7 @@ if (socket) {
     isHost = Boolean(payload?.isHost);
     localPlayerIndex = Number.isInteger(payload?.localPlayerIndex) ? payload.localPlayerIndex : null;
     currentRoomCode = payload?.roomCode || currentRoomCode;
+    applyPauseState(Boolean(payload?.paused));
     lastStateFingerprint = "";
     lastEmitAt = 0;
     setLobbyStatus("Матч начался.");
@@ -1044,6 +1075,12 @@ if (socket) {
     applyState(state);
   });
 
+  socket.on("pauseState", payload => {
+    applyPauseState(Boolean(payload?.paused));
+    pushDebugLog(`pauseState:${Boolean(payload?.paused)}`);
+    markNetworkEvent(`pauseState:${Boolean(payload?.paused) ? "on" : "off"}`);
+  });
+
   socket.on("sharedToast", payload => {
     const text = String(payload?.text || "").trim();
     if (!text) return;
@@ -1080,6 +1117,7 @@ if (socket) {
   document.addEventListener("click", e => {
     if (!onlineMatchStarted) return;
     if (isHost || applyingRemoteState || performingRemoteAction) return;
+    if (onlineGamePaused) return;
     if (e.target?.closest?.("#castleModal, #hireModal, #trollCaveModal, #battleModal")) {
       return;
     }
@@ -1101,6 +1139,7 @@ if (socket) {
   document.addEventListener("click", e => {
     if (!onlineMatchStarted) return;
     if (!isHost || applyingRemoteState || performingRemoteAction) return;
+    if (onlineGamePaused) return;
     if (e.target?.closest?.("#castleModal, #hireModal, #trollCaveModal, #battleModal")) {
       return;
     }

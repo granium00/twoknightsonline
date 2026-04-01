@@ -276,6 +276,7 @@
 
 <div id="turnCounter">СЧЁТЧИК ХОДОВ: 0</div>
 <div id="gameTimer">ВРЕМЯ: 00:00</div>
+<button id="pauseGameBtn">ПАУЗА</button>
 <button id="newGameBtn">Новая игра</button>
 <div id="devMiniPanel">
   <div class="dev-title">Окно разработчика</div>
@@ -487,6 +488,16 @@
       <button id="masterBuyGoldRainbow" class="trade-btn"><span class="trade-main">Покупка: 1000 золота</span><span class="trade-price"><img class="price-icon" src="assets/icons/rainbow_stone.png" alt="Радужный камень" />Цена: Радужный камень</span></button>
       <button id="masterBuyTerrorRing" class="trade-btn"><span class="trade-main">Покупка: Кольцо ужаса</span><span class="trade-price"><img class="price-icon" src="assets/icons/ring_persuasion.png" alt="Кольцо убеждения" />Цена: Кольцо убеждения</span></button>
       <button id="masterCloseBtn">Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<div id="pauseOverlay">
+  <div class="guard-card">
+    <h3>Игра приостановлена</h3>
+    <p>Один из игроков поставил матч на паузу.</p>
+    <div class="guard-actions">
+      <button id="resumeGameBtn">Играть</button>
     </div>
   </div>
 </div>

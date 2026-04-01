@@ -3511,6 +3511,7 @@ function isElementShown(elem) {
 }
 
 function canLocalPlayerAct() {
+  if (typeof onlineGamePaused !== "undefined" && onlineGamePaused) return false;
   const inMultiplayer = typeof socket !== "undefined" && socket;
   if (!inMultiplayer) return true;
   if (typeof localPlayerIndex === "undefined" || localPlayerIndex === null) return true;

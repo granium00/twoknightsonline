@@ -625,6 +625,35 @@
       display: inline-block;
       white-space: nowrap;
     }
+    #pauseGameBtn {
+      position: fixed;
+      right: 16px;
+      bottom: 136px;
+      background: #7a2e2e;
+      color: #fff4f4;
+      border: 1px solid #552020;
+      padding: 8px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 0.8rem;
+      letter-spacing: 0.04em;
+      z-index: 50;
+      width: auto;
+      display: inline-block;
+      white-space: nowrap;
+    }
+    #pauseOverlay {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(5, 10, 18, 0.72);
+      backdrop-filter: blur(6px);
+      z-index: 180;
+    }
     #devPanel {
       position: fixed;
       left: 16px;

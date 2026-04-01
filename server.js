@@ -52,7 +52,8 @@ function createRoom(code = DEFAULT_ROOM_CODE) {
     })),
     disconnectTimers: HERO_DEFS.map(() => null),
     latestState: null,
-    started: false
+    started: false,
+    paused: false
   };
   rooms.set(code, room);
   return room;
@@ -116,6 +117,11 @@ function emitLobbyState(room, io) {
   }
 }
 
+function emitPauseState(room, io) {
+  if (!room) return;
+  io.to(room.code).emit("pauseState", { paused: Boolean(room.paused) });
+}
+
 function hasLiveSocket(io, socketId) {
   return Boolean(socketId && io?.sockets?.sockets?.has(socketId));
 }
@@ -128,6 +134,7 @@ function countLiveRoomSockets(room, io) {
 function hardResetRoom(room) {
   if (!room) return;
   room.started = false;
+  room.paused = false;
   room.latestState = null;
   room.players.forEach((player, index) => {
     if (!player) return;
@@ -162,16 +169,19 @@ function tryStartRoom(room, io) {
   syncRoomPresence(room, io);
   if (room.players.some(player => !player.clientId || !player.socketId)) return;
   room.started = true;
+  room.paused = false;
   room.latestState = null;
   room.players.forEach((player, index) => {
     if (!player.socketId) return;
     io.to(player.socketId).emit("matchStarted", {
       roomCode: room.code,
       isHost: index === 0,
-      localPlayerIndex: index
+      localPlayerIndex: index,
+      paused: false
     });
   });
   emitLobbyState(room, io);
+  emitPauseState(room, io);
 }
 
 function cleanupRoom(room) {
@@ -201,11 +211,13 @@ function attachSocketToRoomPlayer(room, socket, playerIndex, io) {
       roomCode: room.code,
       isHost: playerIndex === 0,
       localPlayerIndex: playerIndex,
-      resumed: true
+      resumed: true,
+      paused: Boolean(room.paused)
     });
     if (room.latestState) {
       io.to(socket.id).emit("resumeState", room.latestState);
     }
+    io.to(socket.id).emit("pauseState", { paused: Boolean(room.paused) });
   } else {
     io.to(socket.id).emit("roomJoined", { roomCode: room.code, resumed: true });
   }
@@ -231,6 +243,7 @@ function finalizeDisconnect(room, playerIndex, io) {
   player.clientId = null;
   room.latestState = null;
   room.started = false;
+  room.paused = false;
   room.disconnectTimers[playerIndex] = null;
 
   room.players.forEach((otherPlayer, otherIndex) => {
@@ -350,6 +363,14 @@ io.on("connection", socket => {
       }
     }
     emitLobbyState(room, io);
+    emitPauseState(room, io);
+  });
+
+  socket.on("togglePause", payload => {
+    const room = getRoomForSocket(socket);
+    if (!room || !room.started) return;
+    room.paused = Boolean(payload?.paused);
+    emitPauseState(room, io);
   });
 
   socket.on("clientAction", action => {
