@@ -2434,16 +2434,19 @@ cityRewardButtons.forEach(btn => {
       player.barbarianRewards.r5 = true;
       player.resources.gold += 1500;
       showPickupToast("Награда: +1500 золота");
+      flashPrice(btn, 5, "assets/icons/barbarian_village.png", "Лагеря варваров");
     }
     if (amount === "10" && player.barbarianKills >= 10 && !player.barbarianRewards.r10) {
       player.barbarianRewards.r10 = true;
       player.resources.gold += 3000;
       showPickupToast("Награда: +3000 золота");
+      flashPrice(btn, 10, "assets/icons/barbarian_village.png", "Лагеря варваров");
     }
     if (amount === "20" && player.barbarianKills >= 20 && !player.barbarianRewards.r20) {
       player.barbarianRewards.r20 = true;
       player.resources.gold += 5000;
       showPickupToast("Награда: +5000 золота");
+      flashPrice(btn, 20, "assets/icons/barbarian_village.png", "Лагеря варваров");
     }
     updatePlayerResources(cityPlayerIndex);
     openCity(cityPlayerIndex);
@@ -2497,6 +2500,9 @@ function handleCityPoisonUse() {
     updatePlayerResources(cityPlayerIndex);
     closeCity();
     showPickupToast("Яд отравил короля.");
+    if (cityPoisonBtn) {
+      flashPrice(cityPoisonBtn, 1, "assets/icons/poison.png", "Яд");
+    }
     showGameOver(cityPlayerIndex);
   } else {
     showPickupToast(`Нужно ${POISON_INFLUENCE_THRESHOLD} влияния, чтобы яд сработал.`);
