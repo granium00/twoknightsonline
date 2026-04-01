@@ -3735,7 +3735,11 @@ function shouldRevealReachableCells() {
 }
 
 function hasBlockingTurnModalOpen() {
-  return TURN_BLOCKING_MODALS.some(getModal => isElementShown(getModal()));
+  const hasLocalModal = TURN_BLOCKING_MODALS.some(getModal => isElementShown(getModal()));
+  const hasDeferredRemoteModal =
+    typeof deferredPrivateTurnPlayerIndex === "number" &&
+    deferredPrivateTurnPlayerIndex === currentPlayerIndex;
+  return hasLocalModal || hasDeferredRemoteModal;
 }
 
 function updateEndTurnButton() {
@@ -3757,6 +3761,9 @@ function refreshTurnControls() {
 function completeTurnAdvance() {
   pendingTurnAdvance = false;
   pendingTurnManualOnly = false;
+  if (typeof deferredPrivateTurnPlayerIndex !== "undefined") {
+    deferredPrivateTurnPlayerIndex = null;
+  }
   ballistaModePlayerIndex = null;
   tickAllTimedBuffs();
   collectCastleIncomes(currentPlayerIndex);

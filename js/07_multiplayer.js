@@ -27,6 +27,7 @@ let lastStateFingerprint = "";
 let lastEmitAt = 0;
 let performingRemoteAction = false;
 let currentPrivateUiPlayerIndex = null;
+let deferredPrivateTurnPlayerIndex = null;
 let onlineGamePaused = false;
 
 const lobbyOverlay = document.getElementById("lobbyOverlay");
@@ -795,6 +796,9 @@ function getActionFromEvent(e) {
 
 function performHostAction(action) {
   if (!action) return;
+  if (action.type === "dom_click" && action.id === "endTurnBtn") {
+    deferredPrivateTurnPlayerIndex = null;
+  }
   performingRemoteAction = true;
   lastHostActionAt = Date.now();
   pushDebugLog(`performHostAction:${action.type}`);
@@ -1018,6 +1022,13 @@ function forceStartHostTurn() {
 
 function emitPrivateUiToPlayer(playerIndex, type, payload = {}) {
   if (!socket || !onlineMatchStarted || !isHost) return false;
+  if (
+    Number.isInteger(playerIndex) &&
+    playerIndex === currentPlayerIndex &&
+    /Modal$/.test(String(type))
+  ) {
+    deferredPrivateTurnPlayerIndex = playerIndex;
+  }
   socket.emit("privateUi", { playerIndex, type, payload });
   pushDebugLog(`privateUi:${type}:p${playerIndex}`);
   markNetworkEvent(`privateUi:${type}`);
