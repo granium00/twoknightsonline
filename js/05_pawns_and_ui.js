@@ -1,4 +1,4 @@
-// ────────────────────────────────────────
+﻿// ────────────────────────────────────────
 //   ПЕШКИ
 // ────────────────────────────────────────
 const startNode = importantNodes.find(n => n.id === 6) || {x: 0, y: 0};
@@ -258,7 +258,8 @@ function shouldBroadcastSharedPickupToast(text) {
     "Сокровище:",
     "Таинственный цветок",
     "Радужный камень",
-    "Тролли оглушили игрока"
+    "Тролли оглушили игрока",
+    "не может атаковать: в кармане нет войск"
   ];
   return sharedPatterns.some(pattern => text.includes(pattern));
 }
@@ -3451,11 +3452,11 @@ function upgradeCastleLevel() {
 
 function updatePawn(player, index) {
   const pawn = pawns[index];
-  const pawnSize = Math.max(16, Math.round(cellSize * 0.7));
+  const pawnSize = Math.max(28, Math.round(cellSize * 0.95));
   pawn.style.width = pawnSize + "px";
   pawn.style.height = pawnSize + "px";
-  pawn.style.borderWidth = Math.max(2, Math.round(cellSize * 0.07)) + "px";
-  pawn.style.fontSize = Math.max(12, Math.round(cellSize * 0.38)) + "px";
+  pawn.style.borderWidth = Math.max(2, Math.round(pawnSize * 0.06)) + "px";
+  pawn.style.fontSize = Math.max(14, Math.round(pawnSize * 0.45)) + "px";
   const centerX = player.x * cellSize + cellSize / 2;
   const centerY = player.y * cellSize + cellSize / 2;
   pawn.style.left = centerX + "px";
@@ -4393,6 +4394,7 @@ if (typeof MutationObserver !== "undefined" && turnModalObserverTargets.length) 
     });
   });
 }
+
 
 
 

@@ -394,8 +394,8 @@
       border: none;
     }
     .pawn .icon {
-      width: 220%;
-      height: 220%;
+      width: 125%;
+      height: 125%;
       object-fit: contain;
       pointer-events: none;
       filter: drop-shadow(0 0 10px rgba(0, 0, 0, 0.4));

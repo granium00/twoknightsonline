@@ -1,4 +1,4 @@
-// ────────────────────────────────────────
+﻿// ────────────────────────────────────────
 //   ХОД ПО СОСЕДНИМ КЛЕТКАМ (вверх, вниз, влево, вправо)
 // ────────────────────────────────────────
 game.addEventListener("click", e => {
@@ -32,7 +32,6 @@ game.addEventListener("click", e => {
   }
   const wasReachable = reachableKeys.has(key);
   if (!wasReachable) return;
-  clearReachable();
   const mercenaryTarget = getMercenaryAtKey(key);
   if (mercenaryTarget) {
     if (currentPlayer.pocket.army <= 0) {
@@ -40,6 +39,7 @@ game.addEventListener("click", e => {
       return;
     }
     // Сначала игрок становится на клетку наёмника, затем начинается бой
+    clearReachable();
     currentPlayer.x = gridX;
     currentPlayer.y = gridY;
     updatePawns();
@@ -55,6 +55,7 @@ game.addEventListener("click", e => {
   }
   const thiefTarget = getThiefAtKey(key);
   if (thiefTarget) {
+    clearReachable();
     const hit = Math.random() < 0.5;
     if (!hit) {
       showPickupToast("Вы промахнулись");
@@ -89,6 +90,7 @@ game.addEventListener("click", e => {
         return;
       }
     }
+    clearReachable();
     showGuardModalFor(currentPlayerIndex, gridX, gridY, guardAccess[currentPlayerIndex]);
     return;
   }
@@ -99,9 +101,13 @@ game.addEventListener("click", e => {
 
   if (defenderIndex !== -1) {
     if (currentPlayer.pocket.army <= 0) {
-      showPickupToast("В кармане нет войск для боя.");
+      const attackerLabel = typeof currentPlayer.id === "number"
+        ? `Игрок ${currentPlayer.id + 1}`
+        : `Игрок ${currentPlayerIndex + 1}`;
+      showPickupToast(`${attackerLabel} не может атаковать: в кармане нет войск.`);
       return;
     }
+    clearReachable();
     const castleKey = getCastleBaseKeyForPos(gridX, gridY) || key;
     const node = nodeByPos[castleKey];
     const defenderOwnsCastle =
