@@ -259,7 +259,8 @@ function shouldBroadcastSharedPickupToast(text) {
     "Таинственный цветок",
     "Радужный камень",
     "Тролли оглушили игрока",
-    "не может атаковать: в кармане нет войск"
+    "не может атаковать: в кармане нет войск",
+    "Без меча героя нельзя вступить в бой с драконом."
   ];
   return sharedPatterns.some(pattern => text.includes(pattern));
 }

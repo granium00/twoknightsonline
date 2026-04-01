@@ -229,8 +229,17 @@ SPAWN_BLOCKED_COORDINATES.forEach(range => {
     spawnBlockedKeys.add(`${x},${y - 1}`);
   }
 });
+const dragonSpawnBlockedKeys = new Set();
+importantNodes.forEach(node => {
+  if (node.type !== "dragon") return;
+  dragonSpawnBlockedKeys.add(`${node.x},${node.y}`);
+  dragonSpawnBlockedKeys.add(`${node.x + 1},${node.y}`);
+  dragonSpawnBlockedKeys.add(`${node.x},${node.y + 1}`);
+  dragonSpawnBlockedKeys.add(`${node.x + 1},${node.y + 1}`);
+});
 function isSpawnBlocked(x, y) {
-  return spawnBlockedKeys.has(`${x},${y}`);
+  const key = `${x},${y}`;
+  return spawnBlockedKeys.has(key) || dragonSpawnBlockedKeys.has(key);
 }
 let turnsUntilResources = RESOURCE_INTERVAL;
 let toastTimer = null;
