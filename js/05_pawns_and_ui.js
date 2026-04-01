@@ -2449,11 +2449,7 @@ function advanceThieves() {
   }
 }
 
-function openCity(playerIndex) {
-  if (shouldDelegatePrivateUiToPlayer(playerIndex)) {
-    emitPrivateUiToPlayer(playerIndex, "showCityModal", { playerIndex });
-    return;
-  }
+function syncCityModalState(playerIndex) {
   const player = players[playerIndex];
   if (!player) return;
   const totalGold = (player.resources.gold || 0) + (player.pocket.gold || 0);
@@ -2489,6 +2485,14 @@ function openCity(playerIndex) {
   if (cityPoisonBtn) {
     cityPoisonBtn.disabled = (player.poisonCount || 0) <= 0;
   }
+}
+
+function openCity(playerIndex) {
+  if (shouldDelegatePrivateUiToPlayer(playerIndex)) {
+    emitPrivateUiToPlayer(playerIndex, "showCityModal", { playerIndex });
+    return;
+  }
+  syncCityModalState(playerIndex);
   cityModal.style.display = "flex";
   cityPlayerIndex = playerIndex;
 }

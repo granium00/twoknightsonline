@@ -976,6 +976,9 @@ function performPrivateUiAction(action) {
     if (modalType === "city") {
       if (Number.isInteger(playerIndex)) {
         cityPlayerIndex = playerIndex;
+        if (typeof syncCityModalState === "function") {
+          syncCityModalState(playerIndex);
+        }
       }
       if (actionType === "reward" && payload.rewardType) {
         clickBySelector(`[data-city-reward="${payload.rewardType}"]`);
