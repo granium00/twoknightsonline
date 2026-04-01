@@ -919,6 +919,10 @@ if (socket) {
     }
     if (type === "showCastleModal" && typeof showCastleModal === "function") {
       showCastleModal(payload.key, payload.playerIndex);
+      return;
+    }
+    if (type === "showHireModal" && typeof openHire === "function") {
+      openHire(payload.playerIndex);
     }
   });
 

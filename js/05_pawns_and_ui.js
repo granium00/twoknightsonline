@@ -1626,6 +1626,18 @@ function spawnCutthroat(playerIndex) {
 }
 
 function openHire(playerIndex) {
+  if (shouldDelegatePrivateUiToPlayer(playerIndex)) {
+    emitPrivateUiToPlayer(playerIndex, "showHireModal", { playerIndex });
+    return;
+  }
+  if (typeof socket !== "undefined" &&
+      socket &&
+      typeof onlineMatchStarted !== "undefined" &&
+      onlineMatchStarted &&
+      typeof localPlayerIndex === "number" &&
+      playerIndex !== localPlayerIndex) {
+    return;
+  }
   hirePlayerIndex = playerIndex;
   const player = players[playerIndex];
   const gold = getTotalGold(player);
