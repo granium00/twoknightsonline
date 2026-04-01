@@ -331,6 +331,9 @@ function buildState() {
     cutthroatIdCounter,
     lastBattleResult: shallowClone(lastBattleResult),
     lastBattleId,
+    pendingTurnAdvance,
+    pendingTurnManualOnly,
+    deferredPrivateTurnPlayerIndex,
     reachableKeys: Array.from(reachableKeys),
     castleOwnersByKey: shallowClone(castleOwnersByKey),
     castleStatsByKey: shallowClone(castleStatsByKey)
@@ -599,6 +602,9 @@ function applyState(state) {
   gameTimerSeconds = state.gameTimerSeconds ?? gameTimerSeconds;
   const incomingBattleId = state.lastBattleId ?? lastBattleId;
   const incomingBattleResult = state.lastBattleResult ?? lastBattleResult;
+  pendingTurnAdvance = state.pendingTurnAdvance ?? pendingTurnAdvance;
+  pendingTurnManualOnly = state.pendingTurnManualOnly ?? pendingTurnManualOnly;
+  deferredPrivateTurnPlayerIndex = state.deferredPrivateTurnPlayerIndex ?? deferredPrivateTurnPlayerIndex;
 
   state.players?.forEach((data, idx) => {
     if (!players[idx]) return;

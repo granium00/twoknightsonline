@@ -3744,10 +3744,13 @@ function hasBlockingTurnModalOpen() {
 
 function updateEndTurnButton() {
   if (!endTurnBtn) return;
-  const showButton = pendingTurnAdvance || movesRemaining > 0;
+  const hasDeferredRemoteModal =
+    typeof deferredPrivateTurnPlayerIndex === "number" &&
+    deferredPrivateTurnPlayerIndex === currentPlayerIndex;
+  const showButton = pendingTurnAdvance || movesRemaining > 0 || hasDeferredRemoteModal;
   endTurnBtn.style.display = showButton ? "block" : "none";
   endTurnBtn.disabled =
-    !pendingTurnAdvance ||
+    (!pendingTurnAdvance && !hasDeferredRemoteModal) ||
     !canLocalPlayerAct() ||
     hasBlockingTurnModalOpen() ||
     gameEnded;
