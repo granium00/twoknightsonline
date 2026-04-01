@@ -437,7 +437,8 @@ function applySpecialEntry(entry) {
     setCellIcon(cell, "mage.png", "Mage");
   }
   if (entry.extraClass === "portal") {
-    cell.textContent = entry.label || "ПОР";
+    cell.textContent = "";
+    setCellIcon(cell, "portal.png", "Портал");
   }
   if (entry.extraClass === "troll-cave") {
     setCellIcon(cell, "troll_cave.png", "Troll cave");
