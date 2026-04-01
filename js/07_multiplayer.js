@@ -29,6 +29,7 @@ let performingRemoteAction = false;
 
 const lobbyOverlay = document.getElementById("lobbyOverlay");
 const lobbyStatusText = document.getElementById("lobbyStatusText");
+const resetLobbyBtn = document.getElementById("resetLobbyBtn");
 const heroSlot0Btn = document.getElementById("heroSlot0Btn");
 const heroSlot1Btn = document.getElementById("heroSlot1Btn");
 const heroSlot0Status = document.getElementById("heroSlot0Status");
@@ -938,6 +939,13 @@ if (heroSlot0Btn && socket) {
 if (heroSlot1Btn && socket) {
   heroSlot1Btn.addEventListener("click", () => {
     socket.emit("selectHero", { heroIndex: 1 });
+  });
+}
+
+if (resetLobbyBtn && socket) {
+  resetLobbyBtn.addEventListener("click", () => {
+    socket.emit("resetLobby");
+    setLobbyStatus("Сбрасываем лобби...");
   });
 }
 

@@ -120,8 +120,33 @@ function hasLiveSocket(io, socketId) {
   return Boolean(socketId && io?.sockets?.sockets?.has(socketId));
 }
 
+function countLiveRoomSockets(room, io) {
+  if (!room) return 0;
+  return room.players.reduce((count, player) => count + (hasLiveSocket(io, player?.socketId) ? 1 : 0), 0);
+}
+
+function hardResetRoom(room) {
+  if (!room) return;
+  room.started = false;
+  room.latestState = null;
+  room.players.forEach((player, index) => {
+    if (!player) return;
+    player.clientId = null;
+    player.socketId = null;
+    const timer = room.disconnectTimers[index];
+    if (timer) {
+      clearTimeout(timer);
+      room.disconnectTimers[index] = null;
+    }
+  });
+}
+
 function syncRoomPresence(room, io) {
   if (!room) return;
+  if (countLiveRoomSockets(room, io) === 0) {
+    hardResetRoom(room);
+    return;
+  }
   room.players.forEach((player, index) => {
     if (!player) return;
     if (hasLiveSocket(io, player.socketId)) return;
@@ -313,6 +338,18 @@ io.on("connection", socket => {
     cancelDisconnectTimer(room, heroIndex);
     emitLobbyState(room, io);
     tryStartRoom(room, io);
+  });
+
+  socket.on("resetLobby", () => {
+    const room = getOrCreateDefaultRoom();
+    hardResetRoom(room);
+    for (const [, otherSocket] of io.sockets.sockets) {
+      if (otherSocket.data.roomCode === room.code) {
+        otherSocket.data.roomCode = room.code;
+        otherSocket.join(room.code);
+      }
+    }
+    emitLobbyState(room, io);
   });
 
   socket.on("clientAction", action => {

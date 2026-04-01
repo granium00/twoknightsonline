@@ -101,6 +101,15 @@
       opacity: 0.5;
       cursor: not-allowed;
     }
+    .lobby-reset-btn {
+      min-height: 44px;
+      border-radius: 12px;
+      border: 1px solid #6b3b3b;
+      background: #3b1f1f;
+      color: #f8fafc;
+      cursor: pointer;
+      font-weight: 700;
+    }
     @media (max-width: 720px) {
       .lobby-heroes {
         grid-template-columns: 1fr;
