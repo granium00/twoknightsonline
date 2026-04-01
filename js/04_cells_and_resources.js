@@ -278,8 +278,7 @@ const PORTAL_COOLDOWN_MIN = 28;
 const PORTAL_COOLDOWN_MAX = 42;
 const PORTAL_MIN_DURATION = 25;
 const PORTAL_MAX_DURATION = 35;
-const PORTAL_LABEL = "ПОР";
-const PORTAL_ICON = { file: "portal.png", alt: "Портал" };
+const PORTAL_LABEL = "";
 let portalState = null;
 const RAINBOW_SPAWN_MIN_TURN = 20;
 const RAINBOW_SPAWN_MAX_TURN = 200;
@@ -1252,16 +1251,6 @@ function spawnPortalPair() {
     if (placedFirst) setCellToInactive(x1, y1);
     if (placedSecond) setCellToInactive(x2, y2);
     return false;
-  }
-  const firstCell = grid[firstKey];
-  const secondCell = grid[secondKey];
-  if (firstCell) {
-    firstCell.textContent = "";
-    setCellIcon(firstCell, PORTAL_ICON.file, PORTAL_ICON.alt);
-  }
-  if (secondCell) {
-    secondCell.textContent = "";
-    setCellIcon(secondCell, PORTAL_ICON.file, PORTAL_ICON.alt);
   }
   portalState.active = true;
   portalState.keys = [firstKey, secondKey];

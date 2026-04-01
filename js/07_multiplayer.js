@@ -438,7 +438,6 @@ function applySpecialEntry(entry) {
   }
   if (entry.extraClass === "portal") {
     cell.textContent = "";
-    setCellIcon(cell, "portal.png", "Портал");
   }
   if (entry.extraClass === "troll-cave") {
     setCellIcon(cell, "troll_cave.png", "Troll cave");
