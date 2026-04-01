@@ -304,6 +304,8 @@ function buildState() {
     mercenaryIdCounter,
     thieves: shallowClone(thieves),
     thiefIdCounter,
+    cutthroats: shallowClone(cutthroats),
+    cutthroatIdCounter,
     lastBattleResult: shallowClone(lastBattleResult),
     lastBattleId,
     reachableKeys: Array.from(reachableKeys),
@@ -410,6 +412,11 @@ function applySpecialEntry(entry) {
   if (entry.extraClass === "troll-cave") {
     setCellIcon(cell, "troll_cave.png", "Troll cave");
   }
+  if (entry.featureKey &&
+      typeof applySpecialFeatureIcon === "function" &&
+      (entry.featureKey === "lumber" || entry.featureKey === "mine" || entry.featureKey === "clay")) {
+    applySpecialFeatureIcon(entry.x, entry.y, entry.featureKey);
+  }
 }
 
 function applyTreasure(entry) {
@@ -512,6 +519,10 @@ function applyMercenary(entry) {
 
 function applyThief(entry) {
   setCellToThief(entry.x, entry.y);
+}
+
+function applyCutthroat(entry) {
+  setCellToCutthroat(entry.x, entry.y);
 }
 
 function applyState(state) {
@@ -624,6 +635,13 @@ function applyState(state) {
     thieves.push(entry);
   });
   thiefIdCounter = state.thiefIdCounter ?? thiefIdCounter;
+
+  cutthroats.length = 0;
+  (state.cutthroats || []).forEach(entry => {
+    applyCutthroat(entry);
+    cutthroats.push(entry);
+  });
+  cutthroatIdCounter = state.cutthroatIdCounter ?? cutthroatIdCounter;
 
   clearReachable();
   reachableKeys = new Set(state.reachableKeys || []);
