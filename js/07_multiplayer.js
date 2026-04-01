@@ -156,7 +156,9 @@ function applyLobbyState(nextState) {
   }
   if (nextState?.started) {
     setLobbyStatus("Матч запускается...");
-    lockGameUi(true);
+    if (!onlineMatchStarted) {
+      lockGameUi(true);
+    }
     updateDebugOverlay();
     return;
   }
