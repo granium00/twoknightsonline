@@ -3735,18 +3735,17 @@ function shouldRevealReachableCells() {
 }
 
 function hasBlockingTurnModalOpen() {
-  const hasLocalModal = TURN_BLOCKING_MODALS.some(getModal => isElementShown(getModal()));
-  const hasDeferredRemoteModal =
-    typeof deferredPrivateTurnPlayerIndex === "number" &&
+  return TURN_BLOCKING_MODALS.some(getModal => isElementShown(getModal()));
+}
+
+function hasDeferredPrivateTurnBlock() {
+  return typeof deferredPrivateTurnPlayerIndex === "number" &&
     deferredPrivateTurnPlayerIndex === currentPlayerIndex;
-  return hasLocalModal || hasDeferredRemoteModal;
 }
 
 function updateEndTurnButton() {
   if (!endTurnBtn) return;
-  const hasDeferredRemoteModal =
-    typeof deferredPrivateTurnPlayerIndex === "number" &&
-    deferredPrivateTurnPlayerIndex === currentPlayerIndex;
+  const hasDeferredRemoteModal = hasDeferredPrivateTurnBlock();
   const showButton = pendingTurnAdvance || movesRemaining > 0 || hasDeferredRemoteModal;
   endTurnBtn.style.display = showButton ? "block" : "none";
   endTurnBtn.disabled =
@@ -3848,7 +3847,7 @@ function completeTurnAdvance() {
 function tryFinishPendingTurn(manual = false) {
   if (!pendingTurnAdvance) return false;
   if (!manual && pendingTurnManualOnly) return false;
-  if (hasBlockingTurnModalOpen()) {
+  if (hasBlockingTurnModalOpen() || hasDeferredPrivateTurnBlock()) {
     refreshTurnControls();
     return false;
   }
@@ -3858,7 +3857,7 @@ function tryFinishPendingTurn(manual = false) {
 
 function requestTurnAdvance() {
   pendingTurnAdvance = true;
-  pendingTurnManualOnly = hasBlockingTurnModalOpen();
+  pendingTurnManualOnly = hasBlockingTurnModalOpen() || hasDeferredPrivateTurnBlock();
   refreshTurnControls();
   if (!pendingTurnManualOnly) {
     tryFinishPendingTurn(false);
