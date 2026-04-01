@@ -32,6 +32,7 @@ const HERO_DEFS = [
   { index: 1, label: "Hero 2" }
 ];
 
+const DEFAULT_ROOM_CODE = "MAIN";
 const rooms = new Map();
 
 function safePath(urlPath) {
@@ -42,25 +43,7 @@ function safePath(urlPath) {
   return resolved;
 }
 
-function randomRoomCode() {
-  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let code = "";
-  for (let i = 0; i < 6; i += 1) {
-    code += alphabet[Math.floor(Math.random() * alphabet.length)];
-  }
-  return code;
-}
-
-function generateRoomCode() {
-  let code = randomRoomCode();
-  while (rooms.has(code)) {
-    code = randomRoomCode();
-  }
-  return code;
-}
-
-function createRoom() {
-  const code = generateRoomCode();
+function createRoom(code = DEFAULT_ROOM_CODE) {
   const room = {
     code,
     players: HERO_DEFS.map(() => ({
@@ -73,6 +56,10 @@ function createRoom() {
   };
   rooms.set(code, room);
   return room;
+}
+
+function getOrCreateDefaultRoom() {
+  return rooms.get(DEFAULT_ROOM_CODE) || createRoom(DEFAULT_ROOM_CODE);
 }
 
 function getRoomForSocket(socket) {
@@ -91,7 +78,7 @@ function getPlayerIndexByClientId(room, clientId) {
 
 function buildEmptyLobbyState() {
   return {
-    roomCode: null,
+    roomCode: DEFAULT_ROOM_CODE,
     started: false,
     yourSlot: -1,
     heroes: HERO_DEFS.map(hero => ({
@@ -264,63 +251,36 @@ const io = new Server(server, {
 io.on("connection", socket => {
   socket.data.clientId = String(socket.handshake.auth?.clientId || socket.id);
   if (!tryRestoreSession(socket, io)) {
-    socket.emit("lobbyState", buildEmptyLobbyState());
-  }
-
-  socket.on("createRoom", () => {
-    let room = getRoomForSocket(socket);
-    if (room) {
-      emitLobbyState(room, io);
-      return;
-    }
-    room = createRoom();
-    socket.data.roomCode = room.code;
-    socket.join(room.code);
-    io.to(socket.id).emit("roomCreated", { roomCode: room.code });
-    io.to(socket.id).emit("lobbyState", buildLobbyState(room, socket.data.clientId));
-  });
-
-  socket.on("joinRoom", payload => {
-    const roomCode = String(payload?.roomCode || "").trim().toUpperCase();
-    const room = rooms.get(roomCode);
-    if (!room) {
-      io.to(socket.id).emit("roomError", { message: "Room not found." });
-      return;
-    }
+    const room = getOrCreateDefaultRoom();
     if (room.started) {
-      io.to(socket.id).emit("roomError", { message: "This match has already started." });
-      return;
-    }
-    const currentRoom = getRoomForSocket(socket);
-    if (currentRoom && currentRoom.code !== room.code) {
-      io.to(socket.id).emit("roomError", { message: "Leave the current room first." });
+      socket.emit("roomError", { message: "Матч уже идет. Дождитесь следующей игры." });
+      socket.emit("lobbyState", buildLobbyState(room, socket.data.clientId));
       return;
     }
     socket.data.roomCode = room.code;
     socket.join(room.code);
-    io.to(socket.id).emit("roomJoined", { roomCode: room.code });
-    emitLobbyState(room, io);
-  });
+    io.to(socket.id).emit("lobbyState", buildLobbyState(room, socket.data.clientId));
+  }
 
   socket.on("selectHero", payload => {
     const room = getRoomForSocket(socket);
     const heroIndex = Number(payload?.heroIndex);
     if (!room) {
-      io.to(socket.id).emit("roomError", { message: "Join a room first." });
+      io.to(socket.id).emit("roomError", { message: "Лобби недоступно. Обновите страницу." });
       return;
     }
     if (room.started) {
-      io.to(socket.id).emit("roomError", { message: "This match has already started." });
+      io.to(socket.id).emit("roomError", { message: "Матч уже начался." });
       return;
     }
     if (!Number.isInteger(heroIndex) || heroIndex < 0 || heroIndex >= HERO_DEFS.length) {
-      io.to(socket.id).emit("roomError", { message: "Invalid hero." });
+      io.to(socket.id).emit("roomError", { message: "Некорректный герой." });
       return;
     }
     const currentIndex = getPlayerIndexByClientId(room, socket.data.clientId);
     const occupant = room.players[heroIndex];
     if (occupant?.clientId && occupant.clientId !== socket.data.clientId) {
-      io.to(socket.id).emit("roomError", { message: "This hero is already taken." });
+      io.to(socket.id).emit("roomError", { message: "Этот герой уже занят." });
       return;
     }
     if (currentIndex !== -1) {

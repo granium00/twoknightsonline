@@ -57,14 +57,6 @@
       color: #cbd5e1;
       line-height: 1.5;
     }
-    .lobby-room-actions {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-    .lobby-room-actions > button,
-    .lobby-join button,
-    .lobby-room-code button,
     .lobby-hero {
       border-radius: 12px;
       border: 1px solid #31506f;
@@ -72,45 +64,6 @@
       background: #19324a;
       cursor: pointer;
       font-weight: 700;
-    }
-    .lobby-room-actions > button,
-    .lobby-join button {
-      min-height: 48px;
-      padding: 12px 14px;
-    }
-    .lobby-join {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 10px;
-    }
-    .lobby-join input {
-      min-height: 48px;
-      padding: 0 14px;
-      border-radius: 12px;
-      border: 1px solid #31506f;
-      background: #0f2234;
-      color: #f8fafc;
-      font-size: 1rem;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-    }
-    .lobby-room-code {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 12px 14px;
-      border-radius: 12px;
-      background: rgba(25, 50, 74, 0.75);
-      border: 1px solid rgba(49, 80, 111, 0.85);
-    }
-    .lobby-room-code strong {
-      font-size: 1.35rem;
-      letter-spacing: 0.16em;
-      color: #ffe08a;
-    }
-    .lobby-room-code button {
-      margin-left: auto;
-      padding: 8px 12px;
     }
     .lobby-heroes {
       display: grid;
@@ -144,15 +97,11 @@
     .lobby-hero.taken {
       opacity: 0.7;
     }
-    .lobby-room-actions > button:disabled,
-    .lobby-join button:disabled,
-    .lobby-room-code button:disabled,
     .lobby-hero:disabled {
       opacity: 0.5;
       cursor: not-allowed;
     }
     @media (max-width: 720px) {
-      .lobby-room-actions,
       .lobby-heroes {
         grid-template-columns: 1fr;
       }

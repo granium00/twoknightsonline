@@ -29,12 +29,6 @@ let performingRemoteAction = false;
 
 const lobbyOverlay = document.getElementById("lobbyOverlay");
 const lobbyStatusText = document.getElementById("lobbyStatusText");
-const createRoomBtn = document.getElementById("createRoomBtn");
-const joinRoomInput = document.getElementById("joinRoomInput");
-const joinRoomBtn = document.getElementById("joinRoomBtn");
-const lobbyRoomCodeWrap = document.getElementById("lobbyRoomCodeWrap");
-const lobbyRoomCode = document.getElementById("lobbyRoomCode");
-const copyRoomCodeBtn = document.getElementById("copyRoomCodeBtn");
 const heroSlot0Btn = document.getElementById("heroSlot0Btn");
 const heroSlot1Btn = document.getElementById("heroSlot1Btn");
 const heroSlot0Status = document.getElementById("heroSlot0Status");
@@ -127,10 +121,9 @@ function setLobbyStatus(text) {
 
 function updateHeroButton(button, statusElem, hero) {
   if (!button || !statusElem) return;
-  const roomExists = Boolean(currentRoomCode);
   const taken = Boolean(hero?.taken);
   const isYours = Boolean(hero?.isYours);
-  button.disabled = !roomExists || (taken && !isYours) || onlineMatchStarted;
+  button.disabled = (taken && !isYours) || onlineMatchStarted;
   button.classList.toggle("taken", taken && !isYours);
   button.classList.toggle("selected", isYours);
   if (isYours) {
@@ -150,12 +143,6 @@ function applyLobbyState(nextState) {
     lastStateFingerprint = "";
   }
   currentRoomCode = nextState?.roomCode || currentRoomCode || "";
-  if (lobbyRoomCodeWrap) {
-    lobbyRoomCodeWrap.style.display = currentRoomCode ? "flex" : "none";
-  }
-  if (lobbyRoomCode) {
-    lobbyRoomCode.textContent = currentRoomCode || "------";
-  }
 
   const hero0 = nextState?.heroes?.find(hero => hero.index === 0);
   const hero1 = nextState?.heroes?.find(hero => hero.index === 1);
@@ -163,32 +150,32 @@ function applyLobbyState(nextState) {
   updateHeroButton(heroSlot1Btn, heroSlot1Status, hero1);
 
   if (!currentRoomCode) {
-    setLobbyStatus("Create a room or join by code, then choose a hero.");
+    setLobbyStatus("Подключаем общее лобби...");
     lockGameUi(true);
     return;
   }
   if (nextState?.started) {
-    setLobbyStatus("Match is starting...");
+    setLobbyStatus("Матч запускается...");
     updateDebugOverlay();
     return;
   }
   if (typeof nextState?.yourSlot === "number" && nextState.yourSlot >= 0) {
     const freeHeroes = (nextState.heroes || []).filter(hero => !hero.taken).length;
     if (freeHeroes > 0) {
-      setLobbyStatus(`Room ${currentRoomCode}. Waiting for the second player or second hero choice.`);
+      setLobbyStatus("Герой выбран. Ждем второго игрока.");
     } else {
-      setLobbyStatus(`Room ${currentRoomCode}. Both heroes chosen, starting match.`);
+      setLobbyStatus("Оба героя выбраны, запускаем матч.");
     }
   } else {
-    setLobbyStatus(`You joined room ${currentRoomCode}. Choose a free hero.`);
+    setLobbyStatus("Выберите свободного героя.");
   }
   lockGameUi(true);
   updateDebugOverlay();
 }
 
 function showRoomError(message) {
-  pushDebugLog(`showRoomError:${message || "Room error."}`);
-  setLobbyStatus(message || "Room error.");
+  pushDebugLog(`showRoomError:${message || "Lobby error."}`);
+  setLobbyStatus(message || "Ошибка лобби.");
   if (!onlineMatchStarted) {
     lockGameUi(true);
   }
@@ -768,41 +755,6 @@ function emitPrivateUiToPlayer(playerIndex, type, payload = {}) {
   return true;
 }
 
-if (createRoomBtn && socket) {
-  createRoomBtn.addEventListener("click", () => {
-    socket.emit("createRoom");
-  });
-}
-
-if (joinRoomBtn && joinRoomInput && socket) {
-  joinRoomBtn.addEventListener("click", () => {
-    const roomCode = joinRoomInput.value.trim().toUpperCase();
-    if (!roomCode) {
-      showRoomError("Enter room code.");
-      return;
-    }
-    socket.emit("joinRoom", { roomCode });
-  });
-}
-
-if (joinRoomInput) {
-  joinRoomInput.addEventListener("input", () => {
-    joinRoomInput.value = joinRoomInput.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
-  });
-}
-
-if (copyRoomCodeBtn) {
-  copyRoomCodeBtn.addEventListener("click", async () => {
-    if (!currentRoomCode) return;
-    try {
-      await navigator.clipboard.writeText(currentRoomCode);
-      setLobbyStatus(`Code ${currentRoomCode} copied.`);
-    } catch (err) {
-      setLobbyStatus(`Room code: ${currentRoomCode}`);
-    }
-  });
-}
-
 if (copyDebugLogBtn && debugOverlayText) {
   copyDebugLogBtn.addEventListener("click", async () => {
     const text = debugOverlayText.value || "";
@@ -857,7 +809,7 @@ if (socket) {
     pushDebugLog(`connect:${socket.id}`);
     markNetworkEvent("connect");
     if (!onlineMatchStarted && !currentRoomCode) {
-      setLobbyStatus("Connected. Create a room or join an existing code.");
+      setLobbyStatus("Подключено. Загружаем общее лобби...");
     }
     updateDebugOverlay();
   });
@@ -871,25 +823,6 @@ if (socket) {
       setLobbyStatus("Connection lost. Trying to reconnect...");
       lockGameUi(true);
     }
-    updateDebugOverlay();
-  });
-
-  socket.on("roomCreated", payload => {
-    pushDebugLog(`roomCreated:${payload?.roomCode || "-"}`);
-    markNetworkEvent("roomCreated");
-    currentRoomCode = payload?.roomCode || currentRoomCode;
-    if (lobbyRoomCode) {
-      lobbyRoomCode.textContent = currentRoomCode || "------";
-    }
-    setLobbyStatus(`Room ${currentRoomCode} created. Send the code to the second player.`);
-    updateDebugOverlay();
-  });
-
-  socket.on("roomJoined", payload => {
-    pushDebugLog(`roomJoined:${payload?.roomCode || "-"}`);
-    markNetworkEvent("roomJoined");
-    currentRoomCode = payload?.roomCode || currentRoomCode;
-    setLobbyStatus(`You joined room ${currentRoomCode}. Choose a hero.`);
     updateDebugOverlay();
   });
 
@@ -916,7 +849,7 @@ if (socket) {
     currentRoomCode = payload?.roomCode || currentRoomCode;
     lastStateFingerprint = "";
     lastEmitAt = 0;
-    setLobbyStatus("Match started.");
+    setLobbyStatus("Матч начался.");
     lockGameUi(false);
     updatePanelTitles();
     resetGameState();
