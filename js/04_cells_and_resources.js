@@ -110,6 +110,40 @@ function clearCellIcon(cell) {
   cell.classList.remove("has-icon");
 }
 
+function restoreImportantNodeCell(key, cell) {
+  const node = nodeByPos[key];
+  if (!node || !cell) return false;
+  cell.classList.remove("inactive", "special", "resource-disabled", "mercenary", "thief", "mage", "flower", "clover", "stone", "rainbow-stone", "master", "troll", "troll-cave", "treasure");
+  cell.classList.add("important", node.type);
+  cell.textContent = node.label || node.id || "";
+  clearCellIcon(cell);
+  cell.removeAttribute("data-barbarian");
+  cell.removeAttribute("title");
+  const iconDef = ICONS_BY_ID[node.id];
+  if (iconDef) {
+    cell.textContent = "";
+    setCellIcon(cell, iconDef.file, iconDef.alt);
+  }
+  if (node.type === "castle") {
+    const ownerIndex = castleOwnersByKey[key];
+    const owner = typeof ownerIndex === "number" ? players?.[ownerIndex] : null;
+    if (owner) {
+      cell.classList.add("owned");
+      cell.style.background = owner.color || "";
+      cell.style.borderColor = owner.color || "";
+    } else {
+      cell.classList.remove("owned");
+      cell.style.background = "";
+      cell.style.borderColor = "";
+    }
+    updateCastleBadge(key);
+  } else {
+    cell.style.background = "";
+    cell.style.borderColor = "";
+  }
+  return true;
+}
+
 const ICONS_BY_ID = {
   2: { file: "barracks.png", alt: "КАЗ" },
   6: { file: "hire.png", alt: "НАЕМ" },
@@ -682,6 +716,10 @@ function setCellToInactive(x, y, {skipTreasureCleanup = false} = {}) {
     const key = `${x},${y}`;
     const cell = grid[key];
   if (!cell) return;
+  if (nodeByPos[key]) {
+    restoreImportantNodeCell(key, cell);
+    return;
+  }
   if (!skipTreasureCleanup && treasure && treasure.key === key) {
     clearTreasure();
     return;
