@@ -3660,7 +3660,7 @@ function upgradeCastleLevel() {
 
 function updatePawn(player, index) {
   const pawn = pawns[index];
-  const pawnSize = Math.max(28, Math.round(cellSize * 0.95));
+  const pawnSize = Math.max(40, Math.round(cellSize * 1.12));
   pawn.style.width = pawnSize + "px";
   pawn.style.height = pawnSize + "px";
   pawn.style.borderWidth = Math.max(2, Math.round(pawnSize * 0.06)) + "px";
