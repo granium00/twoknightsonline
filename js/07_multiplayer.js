@@ -727,7 +727,10 @@ function applyState(state) {
     updateRobberModalVisibility();
   }
   if (gameTimerDisplay) {
-    gameTimerDisplay.textContent = `TIME: ${formatTime(gameTimerSeconds)}`;
+    const timerLabel = typeof GAME_TIMER_LABEL === "string" && GAME_TIMER_LABEL
+      ? GAME_TIMER_LABEL
+      : "ВРЕМЯ";
+    gameTimerDisplay.textContent = `${timerLabel}: ${formatTime(gameTimerSeconds)}`;
   }
 
   applyingRemoteState = false;
