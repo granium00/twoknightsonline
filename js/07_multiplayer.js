@@ -804,6 +804,9 @@ function performHostAction(action) {
   if (!action) return;
   if (action.type === "dom_click" && action.id === "endTurnBtn") {
     deferredPrivateTurnPlayerIndex = null;
+    if (typeof refreshTurnControls === "function") {
+      refreshTurnControls();
+    }
   }
   performingRemoteAction = true;
   lastHostActionAt = Date.now();
@@ -831,6 +834,12 @@ function performHostAction(action) {
     return;
   }
   if (action.type === "dom_click") {
+    if (action.id === "endTurnBtn" && typeof tryFinishPendingTurn === "function") {
+      tryFinishPendingTurn(true);
+      performingRemoteAction = false;
+      updateDebugOverlay();
+      return;
+    }
     let el = null;
     if (action.inputId) {
       const input = document.getElementById(action.inputId);
