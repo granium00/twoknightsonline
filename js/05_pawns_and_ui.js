@@ -3537,6 +3537,7 @@ function updateEndTurnButton() {
     !canLocalPlayerAct() ||
     hasBlockingTurnModalOpen() ||
     gameEnded;
+  endTurnBtn.classList.toggle("turn-ready", pendingTurnAdvance && !endTurnBtn.disabled);
 }
 
 function refreshTurnControls() {

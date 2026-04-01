@@ -1377,6 +1377,23 @@
       letter-spacing: 0.02em;
       white-space: nowrap;
     }
+    #endTurnBtn.turn-ready {
+      background: linear-gradient(180deg, #8dffb0, #2d6a4f);
+      color: #08140d;
+      border-color: #c9ffd8;
+      box-shadow: 0 0 0 2px rgba(141, 255, 176, 0.35), 0 0 24px rgba(141, 255, 176, 0.75);
+      animation: end-turn-pulse 0.9s ease-in-out infinite;
+    }
+    @keyframes end-turn-pulse {
+      0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 2px rgba(141, 255, 176, 0.35), 0 0 18px rgba(141, 255, 176, 0.55);
+      }
+      50% {
+        transform: scale(1.04);
+        box-shadow: 0 0 0 4px rgba(141, 255, 176, 0.45), 0 0 34px rgba(141, 255, 176, 0.95);
+      }
+    }
     #newGameBtn {
       background: #2a3b55;
       color: #e9ecef;
