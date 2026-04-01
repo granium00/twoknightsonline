@@ -272,8 +272,6 @@ function shouldDelegatePrivateUiToPlayer(playerIndex) {
     typeof localPlayerIndex === "number" &&
     typeof playerIndex === "number" &&
     playerIndex !== localPlayerIndex &&
-    typeof performingRemoteAction !== "undefined" &&
-    Boolean(performingRemoteAction) &&
     typeof emitPrivateUiToPlayer === "function";
 }
 
