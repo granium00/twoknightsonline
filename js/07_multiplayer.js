@@ -525,6 +525,26 @@ function applyCutthroat(entry) {
   setCellToCutthroat(entry.x, entry.y);
 }
 
+function applyCastleOwnershipVisuals() {
+  Object.entries(nodeByPos || {}).forEach(([key, node]) => {
+    if (!node || node.type !== "castle" || !node.elem) return;
+    const ownerIndex = castleOwnersByKey[key];
+    const owner = typeof ownerIndex === "number" ? players[ownerIndex] : null;
+    if (owner) {
+      node.elem.classList.add("owned");
+      node.elem.style.background = owner.color || "";
+      node.elem.style.borderColor = owner.color || "";
+    } else {
+      node.elem.classList.remove("owned");
+      node.elem.style.background = "";
+      node.elem.style.borderColor = "";
+    }
+    if (typeof updateCastleBadge === "function") {
+      updateCastleBadge(key);
+    }
+  });
+}
+
 function applyState(state) {
   applyingRemoteState = true;
   lastStateUpdateAt = Date.now();
@@ -566,6 +586,7 @@ function applyState(state) {
   Object.assign(castleOwnersByKey, state.castleOwnersByKey || {});
   Object.keys(castleStatsByKey).forEach(key => delete castleStatsByKey[key]);
   Object.assign(castleStatsByKey, state.castleStatsByKey || {});
+  applyCastleOwnershipVisuals();
 
   if (Array.isArray(state.guardAccess)) {
     guardAccess.length = 0;
@@ -1048,7 +1069,7 @@ if (socket) {
   document.addEventListener("click", e => {
     if (!onlineMatchStarted) return;
     if (isHost || applyingRemoteState || performingRemoteAction) return;
-    if (e.target?.closest?.("#castleModal, #hireModal, #trollCaveModal")) {
+    if (e.target?.closest?.("#castleModal, #hireModal, #trollCaveModal, #battleModal")) {
       return;
     }
     const action = getActionFromEvent(e);
@@ -1069,7 +1090,7 @@ if (socket) {
   document.addEventListener("click", e => {
     if (!onlineMatchStarted) return;
     if (!isHost || applyingRemoteState || performingRemoteAction) return;
-    if (e.target?.closest?.("#castleModal, #hireModal, #trollCaveModal")) {
+    if (e.target?.closest?.("#castleModal, #hireModal, #trollCaveModal, #battleModal")) {
       return;
     }
     const action = getActionFromEvent(e);
