@@ -113,7 +113,7 @@ function clearCellIcon(cell) {
 function restoreImportantNodeCell(key, cell) {
   const node = nodeByPos[key];
   if (!node || !cell) return false;
-  cell.classList.remove("inactive", "special", "resource-disabled", "mercenary", "thief", "mage", "flower", "clover", "stone", "rainbow-stone", "master", "troll", "troll-cave", "treasure");
+  cell.classList.remove("inactive", "special", "resource-disabled", "mercenary", "thief", "mage", "portal", "flower", "clover", "stone", "rainbow-stone", "master", "troll", "troll-cave", "treasure");
   cell.classList.add("important", node.type);
   cell.textContent = node.label || node.id || "";
   clearCellIcon(cell);
@@ -279,6 +279,7 @@ const PORTAL_COOLDOWN_MAX = 42;
 const PORTAL_MIN_DURATION = 25;
 const PORTAL_MAX_DURATION = 35;
 const PORTAL_LABEL = "";
+const PORTAL_ICON = { file: "portal.png", alt: "Портал" };
 let portalState = null;
 const RAINBOW_SPAWN_MIN_TURN = 20;
 const RAINBOW_SPAWN_MAX_TURN = 200;
@@ -753,7 +754,7 @@ function setCellToInactive(x, y, {skipTreasureCleanup = false} = {}) {
     clearTreasure();
     return;
   }
-  cell.classList.remove("resource", "important", "owned", "reachable", "barbarian", "special", "forest", "resource-disabled", "mercenary", "thief", "mage", "flower", "clover", "stone", "rainbow-stone", "master", "troll", "troll-cave", "treasure");
+  cell.classList.remove("resource", "important", "owned", "reachable", "barbarian", "special", "forest", "resource-disabled", "mercenary", "thief", "mage", "portal", "flower", "clover", "stone", "rainbow-stone", "master", "troll", "troll-cave", "treasure");
   cell.classList.add("inactive");
   cell.textContent = "";
   clearCellIcon(cell);
@@ -1251,6 +1252,16 @@ function spawnPortalPair() {
     if (placedFirst) setCellToInactive(x1, y1);
     if (placedSecond) setCellToInactive(x2, y2);
     return false;
+  }
+  const firstCell = grid[firstKey];
+  const secondCell = grid[secondKey];
+  if (firstCell) {
+    firstCell.textContent = "";
+    setCellIcon(firstCell, PORTAL_ICON.file, PORTAL_ICON.alt);
+  }
+  if (secondCell) {
+    secondCell.textContent = "";
+    setCellIcon(secondCell, PORTAL_ICON.file, PORTAL_ICON.alt);
   }
   portalState.active = true;
   portalState.keys = [firstKey, secondKey];

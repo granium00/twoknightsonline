@@ -314,9 +314,7 @@
       font-weight: bold;
     }
     .cell.portal {
-      background:
-        url("assets/icons/portal.png") center / 210% 210% no-repeat,
-        radial-gradient(circle at 50% 50%, rgba(99, 102, 241, 0.26), rgba(59, 130, 246, 0.14) 48%, rgba(15, 23, 42, 0.04) 72%);
+      background: radial-gradient(circle at 50% 50%, rgba(99, 102, 241, 0.26), rgba(59, 130, 246, 0.14) 48%, rgba(15, 23, 42, 0.04) 72%);
       border-color: rgba(129, 140, 248, 0.9);
       box-shadow: 0 0 16px rgba(99, 102, 241, 0.5), inset 0 0 10px rgba(147, 197, 253, 0.2);
       overflow: visible;
@@ -346,6 +344,12 @@
     .cell.resource .icon.resource-icon {
       width: 145%;
       height: 145%;
+    }
+    .cell.portal .icon {
+      width: 210%;
+      height: 210%;
+      filter: drop-shadow(0 0 16px rgba(99, 102, 241, 0.75));
+      z-index: 7;
     }
     .cell .mage-timer {
       position: absolute;
