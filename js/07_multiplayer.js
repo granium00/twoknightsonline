@@ -635,6 +635,22 @@ function applyState(state) {
     updatePlayerResources(idx);
     updateInventory(idx);
   });
+  if (typeof castleModal !== "undefined" &&
+      castleModal &&
+      castleModal.style.display === "flex" &&
+      typeof refreshCastleModal === "function" &&
+      typeof castleModalKey !== "undefined" &&
+      castleModalKey &&
+      typeof castleModalPlayerIndex === "number") {
+    refreshCastleModal(castleModalKey, castleModalPlayerIndex);
+  }
+  if (typeof hireModal !== "undefined" &&
+      hireModal &&
+      hireModal.style.display === "flex" &&
+      typeof openHire === "function" &&
+      typeof hirePlayerIndex === "number") {
+    openHire(hirePlayerIndex);
+  }
   updateTurnUI();
   updateStatusPanel();
   if (incomingBattleId !== lastBattleId) {
@@ -678,8 +694,17 @@ function getActionFromEvent(e) {
   );
   if (!clickable) return null;
 
+  const action = { type: "dom_click" };
+  if (clickable.id === "castleDepositBtn" || clickable.id === "castleWithdrawBtn") {
+    const inputId = clickable.id === "castleDepositBtn" ? "castleDepositInput" : "castleWithdrawInput";
+    const input = document.getElementById(inputId);
+    action.inputId = inputId;
+    action.inputValue = input ? input.value : "";
+  }
+
   if (clickable.id) {
-    return { type: "dom_click", id: clickable.id };
+    action.id = clickable.id;
+    return action;
   }
 
   const dataKeys = [
@@ -695,7 +720,9 @@ function getActionFromEvent(e) {
   for (const key of dataKeys) {
     const dataValue = clickable.dataset[key];
     if (dataValue) {
-      return { type: "dom_click", dataKey: key, dataValue };
+      action.dataKey = key;
+      action.dataValue = dataValue;
+      return action;
     }
   }
 
@@ -725,6 +752,12 @@ function performHostAction(action) {
   }
   if (action.type === "dom_click") {
     let el = null;
+    if (action.inputId) {
+      const input = document.getElementById(action.inputId);
+      if (input) {
+        input.value = action.inputValue ?? "";
+      }
+    }
     if (action.id) {
       el = document.getElementById(action.id);
     } else if (action.dataKey) {
@@ -923,6 +956,10 @@ if (socket) {
     }
     if (type === "showHireModal" && typeof openHire === "function") {
       openHire(payload.playerIndex);
+      return;
+    }
+    if (type === "showTrollCaveModal" && typeof openTrollCaveModal === "function") {
+      openTrollCaveModal(payload.text, payload.playerIndex);
     }
   });
 
@@ -931,6 +968,10 @@ if (socket) {
     if (isHost || applyingRemoteState || performingRemoteAction) return;
     const action = getActionFromEvent(e);
     if (!action) return;
+    const localOnlyIds = new Set(["hireClose", "castleModalClose", "trollCaveClose"]);
+    if (action.id && localOnlyIds.has(action.id)) {
+      return;
+    }
     if (typeof canLocalPlayerAct === "function" && !canLocalPlayerAct()) {
       e.preventDefault();
       e.stopImmediatePropagation();

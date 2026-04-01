@@ -678,7 +678,19 @@ function closeStoneResultModal() {
   stoneResultModal.style.display = "none";
 }
 
-function openTrollCaveModal(text) {
+function openTrollCaveModal(text, playerIndex = currentPlayerIndex) {
+  if (shouldDelegatePrivateUiToPlayer(playerIndex)) {
+    emitPrivateUiToPlayer(playerIndex, "showTrollCaveModal", { text, playerIndex });
+    return;
+  }
+  if (typeof socket !== "undefined" &&
+      socket &&
+      typeof onlineMatchStarted !== "undefined" &&
+      onlineMatchStarted &&
+      typeof localPlayerIndex === "number" &&
+      playerIndex !== localPlayerIndex) {
+    return;
+  }
   if (!trollCaveModal || !trollCaveText) return;
   trollCaveText.textContent = text;
   trollCaveModal.style.display = "flex";
@@ -1625,6 +1637,7 @@ function spawnCutthroat(playerIndex) {
 
 function openHire(playerIndex) {
   if (shouldDelegatePrivateUiToPlayer(playerIndex)) {
+    hirePlayerIndex = playerIndex;
     emitPrivateUiToPlayer(playerIndex, "showHireModal", { playerIndex });
     return;
   }
@@ -3141,6 +3154,9 @@ function refreshCastleModal(key, playerIndex) {
 
   function showCastleModal(key, playerIndex) {
     if (!castleModal) return;
+    castleModalKey = key;
+    castleModalPlayerIndex = playerIndex;
+    refreshCastleModal(key, playerIndex);
     if (shouldDelegatePrivateUiToPlayer(playerIndex)) {
       emitPrivateUiToPlayer(playerIndex, "showCastleModal", { key, playerIndex });
       return;
@@ -3153,9 +3169,6 @@ function refreshCastleModal(key, playerIndex) {
         playerIndex !== localPlayerIndex) {
       return;
     }
-    castleModalKey = key;
-    castleModalPlayerIndex = playerIndex;
-    refreshCastleModal(key, playerIndex);
     castleModal.style.display = "flex";
   }
 
@@ -3741,14 +3754,14 @@ function finalizeMove(gridX, gridY) {
       const caveIndex = typeof getTrollCaveIndexByKey === "function" ? getTrollCaveIndexByKey(key) : -1;
       const alreadyLooted = caveIndex >= 0 && TROLL_CAVES && TROLL_CAVES[caveIndex]?.looted;
       if (alreadyLooted) {
-        openTrollCaveModal("\u041f\u0435\u0449\u0435\u0440\u0430 \u043f\u0443\u0441\u0442\u0430.");
+        openTrollCaveModal("\u041f\u0435\u0449\u0435\u0440\u0430 \u043f\u0443\u0441\u0442\u0430.", currentPlayerIndex);
       } else {
         const lootText = rollTrollCaveLoot(currentPlayerIndex);
         if (caveIndex >= 0 && typeof markTrollCaveLooted === "function") {
           markTrollCaveLooted(caveIndex, true);
         }
         if (lootText) {
-          openTrollCaveModal(lootText);
+          openTrollCaveModal(lootText, currentPlayerIndex);
         }
       }
       endTurn();
