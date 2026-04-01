@@ -275,6 +275,19 @@ function shouldDelegatePrivateUiToPlayer(playerIndex) {
     typeof emitPrivateUiToPlayer === "function";
 }
 
+function shouldRoutePrivateUiActionToHost(playerIndex) {
+  return typeof socket !== "undefined" &&
+    Boolean(socket) &&
+    typeof onlineMatchStarted !== "undefined" &&
+    Boolean(onlineMatchStarted) &&
+    typeof isHost !== "undefined" &&
+    !isHost &&
+    typeof localPlayerIndex === "number" &&
+    typeof playerIndex === "number" &&
+    playerIndex === localPlayerIndex &&
+    typeof emitPrivateUiActionToHost === "function";
+}
+
 function updateInventory(playerIndex) {
   const panel = inventoryPanels[playerIndex];
   const player = players[playerIndex];
@@ -1679,6 +1692,43 @@ function openHire(playerIndex) {
   hireModal.style.display = "flex";
 }
 
+function buyHireOption(type) {
+  if (hirePlayerIndex === null) return false;
+  const player = players[hirePlayerIndex];
+  if (!player) return false;
+  const button = hireButtons.find(entry => entry.getAttribute("data-hire") === type);
+  const costLumber = getDiscountedGoldCost(player, 500);
+  const costMine = getDiscountedGoldCost(player, 750);
+  const costClay = getDiscountedGoldCost(player, 1200);
+  const costCutthroat = getDiscountedGoldCost(player, CUTTHROAT_COST);
+  if (type === "lumber") {
+    const ok = spawnMercenary(hirePlayerIndex, "lumber", 15, 500);
+    if (ok) flashPrice(button, costLumber, "assets/icons/icon-gold.png", "Р—РѕР»РѕС‚Рѕ");
+    return ok;
+  }
+  if (type === "mine") {
+    const ok = spawnMercenary(hirePlayerIndex, "mine", 25, 750);
+    if (ok) flashPrice(button, costMine, "assets/icons/icon-gold.png", "Р—РѕР»РѕС‚Рѕ");
+    return ok;
+  }
+  if (type === "clay") {
+    const ok = spawnMercenary(hirePlayerIndex, "clay", 50, 1200);
+    if (ok) flashPrice(button, costClay, "assets/icons/icon-gold.png", "Р—РѕР»РѕС‚Рѕ");
+    return ok;
+  }
+  if (type === "thief") {
+    const ok = spawnThief(hirePlayerIndex);
+    if (ok) flashPrice(button, 1, "assets/icons/token.png", "Р–РµС‚РѕРЅ");
+    return ok;
+  }
+  if (type === "cutthroat") {
+    const ok = spawnCutthroat(hirePlayerIndex);
+    if (ok) flashPrice(button, costCutthroat, "assets/icons/icon-gold.png", "Р—РѕР»РѕС‚Рѕ");
+    return ok;
+  }
+  return false;
+}
+
 function closeHire() {
   hireModal.style.display = "none";
   hirePlayerIndex = null;
@@ -1689,38 +1739,23 @@ hireModal.addEventListener("click", (e) => {
   if (e.target === hireModal) closeHire();
 });
 
-  hireButtons.forEach(btn => {
-    btn.addEventListener("click", () => {
-      if (hirePlayerIndex === null) return;
-      const type = btn.getAttribute("data-hire");
-      const player = players[hirePlayerIndex];
-      const costLumber = getDiscountedGoldCost(player, 500);
-      const costMine = getDiscountedGoldCost(player, 750);
-      const costClay = getDiscountedGoldCost(player, 1200);
-      const costCutthroat = getDiscountedGoldCost(player, CUTTHROAT_COST);
-      if (type === "lumber") {
-      const ok = spawnMercenary(hirePlayerIndex, "lumber", 15, 500);
-      if (ok) flashPrice(btn, costLumber, "assets/icons/icon-gold.png", "Золото");
-      }
-      if (type === "mine") {
-      const ok = spawnMercenary(hirePlayerIndex, "mine", 25, 750);
-      if (ok) flashPrice(btn, costMine, "assets/icons/icon-gold.png", "Золото");
-      }
-      if (type === "clay") {
-      const ok = spawnMercenary(hirePlayerIndex, "clay", 50, 1200);
-      if (ok) flashPrice(btn, costClay, "assets/icons/icon-gold.png", "Золото");
-      }
-      if (type === "thief") {
-      const ok = spawnThief(hirePlayerIndex);
-      if (ok) flashPrice(btn, 1, "assets/icons/token.png", "Жетон");
-      }
-      if (type === "cutthroat") {
-      const ok = spawnCutthroat(hirePlayerIndex);
-      if (ok) flashPrice(btn, costCutthroat, "assets/icons/icon-gold.png", "Золото");
-      }
-      openHire(hirePlayerIndex);
-    });
+hireButtons.forEach(btn => {
+  btn.addEventListener("click", () => {
+    if (hirePlayerIndex === null) return;
+    const type = btn.getAttribute("data-hire");
+    if (shouldRoutePrivateUiActionToHost(hirePlayerIndex)) {
+      emitPrivateUiActionToHost({
+        modalType: "hire",
+        actionType: "buy",
+        playerIndex: hirePlayerIndex,
+        payload: { hireType: type }
+      });
+      return;
+    }
+    buyHireOption(type);
+    openHire(hirePlayerIndex);
   });
+});
 
 function openRepairModal(entry, playerIndex) {
   if (!entry || !repairModal || !repairConfirm) return;
@@ -3236,104 +3271,178 @@ function applySpecialFeatureIcon(x, y, featureKey) {
   }
 }
 
+function buyCastleBallista() {
+  if (!castleModalKey || castleModalPlayerIndex === null) return false;
+  const player = players[castleModalPlayerIndex];
+  if (!player) return false;
+  if ((player.ballistaCount || 0) >= 1) return false;
+  if (player.resources.resources < BALLISTA_COST) return false;
+  player.resources.resources -= BALLISTA_COST;
+  player.ballistaCount = 1;
+  updatePlayerResources(castleModalPlayerIndex);
+  updateInventory(castleModalPlayerIndex);
+  refreshCastleModal(castleModalKey, castleModalPlayerIndex);
+  showPickupToast("РљСѓРїР»РµРЅР° Р‘Р°Р»Р»РёСЃС‚Р°.");
+  flashPrice(ballistaBuyBtn, BALLISTA_COST, "assets/icons/icon-resources.png", "Р РµСЃСѓСЂСЃС‹");
+  return true;
+}
+
+function buyCastleBolt() {
+  if (!castleModalKey || castleModalPlayerIndex === null) return false;
+  const player = players[castleModalPlayerIndex];
+  if (!player) return false;
+  if (player.resources.resources < BOLT_COST) return false;
+  player.resources.resources -= BOLT_COST;
+  player.boltCount = (player.boltCount || 0) + 1;
+  updatePlayerResources(castleModalPlayerIndex);
+  updateInventory(castleModalPlayerIndex);
+  refreshCastleModal(castleModalKey, castleModalPlayerIndex);
+  showPickupToast("РљСѓРїР»РµРЅ Р‘РѕР»С‚ РґР»СЏ Р±Р°Р»Р»РёСЃС‚С‹.");
+  flashPrice(boltBuyBtn, BOLT_COST, "assets/icons/icon-resources.png", "Р РµСЃСѓСЂСЃС‹");
+  return true;
+}
+
+function depositCastleArmy(amount) {
+  if (!castleModalKey || castleModalPlayerIndex === null) return false;
+  const player = players[castleModalPlayerIndex];
+  const stats = ensureCastleStats(castleModalKey);
+  amount = Math.floor(Math.max(0, Number(amount) || 0));
+  const available = player ? player.pocket.army : 0;
+  amount = Math.min(amount, available);
+  if (amount <= 0 || !player) return false;
+  player.pocket.army -= amount;
+  stats.storageArmy = (stats.storageArmy || 0) + amount;
+  updatePlayerResources(castleModalPlayerIndex);
+  recalcPlayerResourceIncome(castleModalPlayerIndex);
+  refreshCastleModal(castleModalKey, castleModalPlayerIndex);
+  showPickupToast(`Р’ Р·Р°РјРѕРє: +${amount} РІРѕР№СЃРє`);
+  return true;
+}
+
+function withdrawCastleArmy(amount) {
+  if (!castleModalKey || castleModalPlayerIndex === null) return false;
+  const player = players[castleModalPlayerIndex];
+  const stats = ensureCastleStats(castleModalKey);
+  const available = stats.storageArmy || 0;
+  amount = Math.floor(Math.max(0, Number(amount) || 0));
+  amount = Math.min(amount, available);
+  if (amount <= 0 || !player) return false;
+  stats.storageArmy = available - amount;
+  player.pocket.army += amount;
+  updatePlayerResources(castleModalPlayerIndex);
+  refreshCastleModal(castleModalKey, castleModalPlayerIndex);
+  showPickupToast(`Р’ РєР°СЂРјР°РЅ: +${amount} РІРѕР№СЃРє`);
+  return true;
+}
+
+function upgradeCastleLevel() {
+  if (!castleModalKey || castleModalPlayerIndex === null) return false;
+  const stats = castleStatsByKey[castleModalKey];
+  const player = players[castleModalPlayerIndex];
+  const upgradeCost = stats && stats.level >= 2 ? 750 : 500;
+  if (!stats || stats.level >= 3 || player.resources.resources < upgradeCost) return false;
+  player.resources.resources -= upgradeCost;
+  stats.level += 1;
+  ensureCastleStats(castleModalKey);
+  updatePlayerResources(castleModalPlayerIndex);
+  updateCastleBadge(castleModalKey);
+  refreshCastleModal(castleModalKey, castleModalPlayerIndex);
+  recalcPlayerResourceIncome(castleModalPlayerIndex);
+  flashPrice(castleUpgradeBtn, upgradeCost, "assets/icons/icon-resources.png", "Р РµСЃСѓСЂСЃС‹");
+  return true;
+}
+
   castleFeatureButtons.forEach(btn => {
     btn.addEventListener("click", () => {
       const feature = btn.dataset.castleFeature;
+      if (shouldRoutePrivateUiActionToHost(castleModalPlayerIndex)) {
+        emitPrivateUiActionToHost({
+          modalType: "castle",
+          actionType: "buyFeature",
+          playerIndex: castleModalPlayerIndex,
+          payload: { key: castleModalKey, featureKey: feature }
+        });
+        return;
+      }
       buyCastleFeature(feature);
     });
   });
   if (ballistaBuyBtn) {
     ballistaBuyBtn.addEventListener("click", () => {
-      if (!castleModalKey || castleModalPlayerIndex === null) return;
-      const player = players[castleModalPlayerIndex];
-      if (!player) return;
-      if ((player.ballistaCount || 0) >= 1) return;
-      if (player.resources.resources < BALLISTA_COST) return;
-      player.resources.resources -= BALLISTA_COST;
-      player.ballistaCount = 1;
-      updatePlayerResources(castleModalPlayerIndex);
-      updateInventory(castleModalPlayerIndex);
-      refreshCastleModal(castleModalKey, castleModalPlayerIndex);
-      showPickupToast("Куплена Баллиста.");
-      flashPrice(ballistaBuyBtn, BALLISTA_COST, "assets/icons/icon-resources.png", "Ресурсы");
+      if (shouldRoutePrivateUiActionToHost(castleModalPlayerIndex)) {
+        emitPrivateUiActionToHost({
+          modalType: "castle",
+          actionType: "buyBallista",
+          playerIndex: castleModalPlayerIndex,
+          payload: { key: castleModalKey }
+        });
+        return;
+      }
+      buyCastleBallista();
     });
   }
   if (boltBuyBtn) {
     boltBuyBtn.addEventListener("click", () => {
-      if (!castleModalKey || castleModalPlayerIndex === null) return;
-      const player = players[castleModalPlayerIndex];
-      if (!player) return;
-      if (player.resources.resources < BOLT_COST) return;
-      player.resources.resources -= BOLT_COST;
-      player.boltCount = (player.boltCount || 0) + 1;
-      updatePlayerResources(castleModalPlayerIndex);
-      updateInventory(castleModalPlayerIndex);
-      refreshCastleModal(castleModalKey, castleModalPlayerIndex);
-      showPickupToast("Куплен Болт для баллисты.");
-      flashPrice(boltBuyBtn, BOLT_COST, "assets/icons/icon-resources.png", "Ресурсы");
+      if (shouldRoutePrivateUiActionToHost(castleModalPlayerIndex)) {
+        emitPrivateUiActionToHost({
+          modalType: "castle",
+          actionType: "buyBolt",
+          playerIndex: castleModalPlayerIndex,
+          payload: { key: castleModalKey }
+        });
+        return;
+      }
+      buyCastleBolt();
     });
   }
 
   if (castleDepositBtn) {
     castleDepositBtn.addEventListener("click", () => {
-      if (!castleModalKey || castleModalPlayerIndex === null) return;
-      const player = players[castleModalPlayerIndex];
-      const stats = ensureCastleStats(castleModalKey);
-      let amount = 0;
-      if (castleDepositInput) {
-        amount = Math.floor(Math.max(0, Number(castleDepositInput.value) || 0));
+      const amount = castleDepositInput ? castleDepositInput.value : 0;
+      if (shouldRoutePrivateUiActionToHost(castleModalPlayerIndex)) {
+        emitPrivateUiActionToHost({
+          modalType: "castle",
+          actionType: "depositArmy",
+          playerIndex: castleModalPlayerIndex,
+          payload: { key: castleModalKey, amount }
+        });
+        return;
       }
-      const available = player ? player.pocket.army : 0;
-      amount = Math.min(amount, available);
-      if (amount <= 0 || !player) return;
-      player.pocket.army -= amount;
-      stats.storageArmy = (stats.storageArmy || 0) + amount;
-      updatePlayerResources(castleModalPlayerIndex);
-      recalcPlayerResourceIncome(castleModalPlayerIndex);
-      refreshCastleModal(castleModalKey, castleModalPlayerIndex);
-      showPickupToast(`В замок: +${amount} войск`);
+      depositCastleArmy(amount);
     });
   }
   if (castleWithdrawBtn) {
     castleWithdrawBtn.addEventListener("click", () => {
-      if (!castleModalKey || castleModalPlayerIndex === null) return;
-      const player = players[castleModalPlayerIndex];
-      const stats = ensureCastleStats(castleModalKey);
-      const available = stats.storageArmy || 0;
-      let amount = 0;
-      if (castleWithdrawInput) {
-        amount = Math.floor(Math.max(0, Number(castleWithdrawInput.value) || 0));
+      const amount = castleWithdrawInput ? castleWithdrawInput.value : 0;
+      if (shouldRoutePrivateUiActionToHost(castleModalPlayerIndex)) {
+        emitPrivateUiActionToHost({
+          modalType: "castle",
+          actionType: "withdrawArmy",
+          playerIndex: castleModalPlayerIndex,
+          payload: { key: castleModalKey, amount }
+        });
+        return;
       }
-      amount = Math.min(amount, available);
-      if (amount <= 0 || !player) return;
-      stats.storageArmy = available - amount;
-      player.pocket.army += amount;
-      updatePlayerResources(castleModalPlayerIndex);
-      refreshCastleModal(castleModalKey, castleModalPlayerIndex);
-      showPickupToast(`В карман: +${amount} войск`);
+      withdrawCastleArmy(amount);
     });
   }
 
   castleUpgradeBtn.addEventListener("click", () => {
-    if (!castleModalKey || castleModalPlayerIndex === null) return;
-    const stats = castleStatsByKey[castleModalKey];
-    const player = players[castleModalPlayerIndex];
-    const upgradeCost = stats && stats.level >= 2 ? 750 : 500;
-    if (!stats || stats.level >= 3 || player.resources.resources < upgradeCost) return;
-    player.resources.resources -= upgradeCost;
-    stats.level += 1;
-    ensureCastleStats(castleModalKey);
-    updatePlayerResources(castleModalPlayerIndex);
-    updateCastleBadge(castleModalKey);
-    refreshCastleModal(castleModalKey, castleModalPlayerIndex);
-    recalcPlayerResourceIncome(castleModalPlayerIndex);
-    flashPrice(castleUpgradeBtn, upgradeCost, "assets/icons/icon-resources.png", "Ресурсы");
+    if (shouldRoutePrivateUiActionToHost(castleModalPlayerIndex)) {
+      emitPrivateUiActionToHost({
+        modalType: "castle",
+        actionType: "upgrade",
+        playerIndex: castleModalPlayerIndex,
+        payload: { key: castleModalKey }
+      });
+      return;
+    }
+    upgradeCastleLevel();
   });
 
   castleModalClose.addEventListener("click", hideCastleModal);
   castleModal.addEventListener("click", (event) => {
     if (event.target === castleModal) {
-
       hideCastleModal();
     }
   });

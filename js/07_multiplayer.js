@@ -735,6 +735,12 @@ function performHostAction(action) {
   lastHostActionAt = Date.now();
   pushDebugLog(`performHostAction:${action.type}`);
   markNetworkEvent(`performHostAction:${action.type}`);
+  if (action.type === "private_ui_action") {
+    performPrivateUiAction(action);
+    performingRemoteAction = false;
+    updateDebugOverlay();
+    return;
+  }
   if (action.type === "game_click") {
     const rect = game.getBoundingClientRect();
     const clickX = rect.left + (action.x + 0.5) * cellSize;
@@ -768,6 +774,64 @@ function performHostAction(action) {
   }
   performingRemoteAction = false;
   updateDebugOverlay();
+}
+
+function performPrivateUiAction(action) {
+  const modalType = String(action?.modalType || "").trim();
+  const actionType = String(action?.actionType || "").trim();
+  const playerIndex = Number(action?.playerIndex);
+  const payload = action?.payload || {};
+  if (modalType === "hire") {
+    if (Number.isInteger(playerIndex)) {
+      hirePlayerIndex = playerIndex;
+    }
+    if (actionType === "buy" && typeof buyHireOption === "function") {
+      buyHireOption(payload.hireType);
+      return;
+    }
+  }
+  if (modalType === "castle") {
+    if (payload.key) {
+      castleModalKey = payload.key;
+    }
+    if (Number.isInteger(playerIndex)) {
+      castleModalPlayerIndex = playerIndex;
+    }
+    if (castleModalKey && Number.isInteger(castleModalPlayerIndex) && typeof refreshCastleModal === "function") {
+      refreshCastleModal(castleModalKey, castleModalPlayerIndex);
+    }
+    if (actionType === "buyFeature" && typeof buyCastleFeature === "function") {
+      buyCastleFeature(payload.featureKey);
+      return;
+    }
+    if (actionType === "buyBallista" && typeof buyCastleBallista === "function") {
+      buyCastleBallista();
+      return;
+    }
+    if (actionType === "buyBolt" && typeof buyCastleBolt === "function") {
+      buyCastleBolt();
+      return;
+    }
+    if (actionType === "depositArmy" && typeof depositCastleArmy === "function") {
+      depositCastleArmy(payload.amount);
+      return;
+    }
+    if (actionType === "withdrawArmy" && typeof withdrawCastleArmy === "function") {
+      withdrawCastleArmy(payload.amount);
+      return;
+    }
+    if (actionType === "upgrade" && typeof upgradeCastleLevel === "function") {
+      upgradeCastleLevel();
+    }
+  }
+}
+
+function emitPrivateUiActionToHost(action) {
+  if (!socket || !onlineMatchStarted || isHost) return false;
+  socket.emit("clientAction", { type: "private_ui_action", ...action });
+  pushDebugLog(`clientPrivateUi:${action?.modalType || "-"}:${action?.actionType || "-"}`);
+  markNetworkEvent(`clientPrivateUi:${action?.modalType || "-"}`);
+  return true;
 }
 
 function forceStartHostTurn() {
@@ -966,12 +1030,11 @@ if (socket) {
   document.addEventListener("click", e => {
     if (!onlineMatchStarted) return;
     if (isHost || applyingRemoteState || performingRemoteAction) return;
-    const action = getActionFromEvent(e);
-    if (!action) return;
-    const localOnlyIds = new Set(["hireClose", "castleModalClose", "trollCaveClose"]);
-    if (action.id && localOnlyIds.has(action.id)) {
+    if (e.target?.closest?.("#castleModal, #hireModal, #trollCaveModal")) {
       return;
     }
+    const action = getActionFromEvent(e);
+    if (!action) return;
     if (typeof canLocalPlayerAct === "function" && !canLocalPlayerAct()) {
       e.preventDefault();
       e.stopImmediatePropagation();
@@ -988,6 +1051,9 @@ if (socket) {
   document.addEventListener("click", e => {
     if (!onlineMatchStarted) return;
     if (!isHost || applyingRemoteState || performingRemoteAction) return;
+    if (e.target?.closest?.("#castleModal, #hireModal, #trollCaveModal")) {
+      return;
+    }
     const action = getActionFromEvent(e);
     if (action && typeof canLocalPlayerAct === "function" && !canLocalPlayerAct()) {
       e.preventDefault();
