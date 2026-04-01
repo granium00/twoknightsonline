@@ -30,7 +30,8 @@ game.addEventListener("click", e => {
   if (movesRemaining <= 0) {
     return;
   }
-  if (!reachableKeys.has(key)) return;
+  const wasReachable = reachableKeys.has(key);
+  if (!wasReachable) return;
   clearReachable();
   const mercenaryTarget = getMercenaryAtKey(key);
   if (mercenaryTarget) {
@@ -131,7 +132,7 @@ game.addEventListener("click", e => {
   }
 
   if (blockedCellKeys.has(key)) return;
-  if (!reachableKeys.has(key)) return;
+  if (!wasReachable) return;
 
   finalizeMove(gridX, gridY);
 });
