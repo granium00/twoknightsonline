@@ -116,8 +116,25 @@ function emitLobbyState(room, io) {
   }
 }
 
+function hasLiveSocket(io, socketId) {
+  return Boolean(socketId && io?.sockets?.sockets?.has(socketId));
+}
+
+function syncRoomPresence(room, io) {
+  if (!room) return;
+  room.players.forEach((player, index) => {
+    if (!player) return;
+    if (hasLiveSocket(io, player.socketId)) return;
+    player.socketId = null;
+    if (!room.disconnectTimers[index]) {
+      player.clientId = null;
+    }
+  });
+}
+
 function tryStartRoom(room, io) {
   if (room.started) return;
+  syncRoomPresence(room, io);
   if (room.players.some(player => !player.clientId || !player.socketId)) return;
   room.started = true;
   room.latestState = null;
@@ -253,6 +270,7 @@ io.on("connection", socket => {
   socket.data.clientId = String(socket.handshake.auth?.clientId || socket.id);
   if (!tryRestoreSession(socket, io)) {
     const room = getOrCreateDefaultRoom();
+    syncRoomPresence(room, io);
     if (room.started) {
       socket.emit("roomError", { message: "Матч уже идет. Дождитесь следующей игры." });
       socket.emit("lobbyState", buildLobbyState(room, socket.data.clientId));
@@ -278,6 +296,7 @@ io.on("connection", socket => {
       io.to(socket.id).emit("roomError", { message: "Некорректный герой." });
       return;
     }
+    syncRoomPresence(room, io);
     const currentIndex = getPlayerIndexByClientId(room, socket.data.clientId);
     const occupant = room.players[heroIndex];
     if (occupant?.clientId && occupant.clientId !== socket.data.clientId) {
