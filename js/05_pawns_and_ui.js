@@ -111,7 +111,7 @@ const POTION_LUCK_TURNS = 25;
 const BALLISTA_COST = 1000;
 const BOLT_COST = 150;
 const TRAP_STUN_COST = 150;
-const TRAP_STUN_DURATION = 5;
+const TRAP_STUN_DURATION = 3;
 const BALLISTA_RANGE = 11;
 const BALLISTA_DAMAGE_MIN = 13;
 const BALLISTA_DAMAGE_MAX = 17;
@@ -125,7 +125,7 @@ const INVENTORY_ITEMS = [
   {key: "token", label: "Жетон", icon: "token.png", count: player => player.tokenCount || 0},
   {key: "ballista", label: "Баллиста", icon: "ballista.png", count: player => player.ballistaCount || 0, useAction: "ballista"},
   {key: "bolt", label: "Болт", icon: "ballista_bolt.png", count: player => player.boltCount || 0},
-  {key: "trap-stun", label: "Ловушка-стан", icon: "poison.png", count: player => player.trapStunCount || 0, useAction: "trap-stun"},
+  {key: "trap-stun", label: "Ловушка-стан", icon: "trap_stun.png", count: player => player.trapStunCount || 0, useAction: "trap-stun"},
   {key: "ring", label: "Кольцо убеждения", icon: "ring_persuasion.png", count: player => player.ringCount || 0},
   {key: "terror-ring", label: "Кольцо ужаса", icon: "ring_terror.png", count: player => player.terrorRingCount || 0},
   {key: "rainbow-stone", label: "Радужный камень", icon: "rainbow_stone.png", count: player => player.rainbowStoneCount || 0},
@@ -4094,7 +4094,7 @@ function finalizeMove(gridX, gridY) {
     const trappedPlayerLabel = typeof currentPlayer.id === "number"
       ? `игрока ${currentPlayer.id + 1}`
       : `игрока ${currentPlayerIndex + 1}`;
-    showPickupToast(`Ловушка-стан оглушила ${trappedPlayerLabel} — пропуск 5 ходов.`);
+    showPickupToast(`Ловушка-стан оглушила ${trappedPlayerLabel} — пропуск 3 ходов.`);
     endTurn();
     return;
   }
