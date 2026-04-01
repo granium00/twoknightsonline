@@ -4215,9 +4215,6 @@ function finalizeMove(gridX, gridY) {
     const otherKey = typeof getOtherPortalKey === "function" ? getOtherPortalKey(key) : null;
     if (otherKey) {
       const [tx, ty] = otherKey.split(",").map(Number);
-      if (typeof clearPortalPair === "function") {
-        clearPortalPair();
-      }
       currentPlayer.x = tx;
       currentPlayer.y = ty;
       updatePawns();

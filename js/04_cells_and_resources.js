@@ -272,6 +272,14 @@ const STONE_COOLDOWN_MAX = 20;
 const STONE_DURATION = 8;
 let nextStoneSpawnTurn = null;
 const stoneByPos = {};
+const PORTAL_FIRST_MIN_TURN = 18;
+const PORTAL_FIRST_MAX_TURN = 30;
+const PORTAL_COOLDOWN_MIN = 28;
+const PORTAL_COOLDOWN_MAX = 42;
+const PORTAL_MIN_DURATION = 25;
+const PORTAL_MAX_DURATION = 35;
+const PORTAL_LABEL = "ПОР";
+let portalState = null;
 const RAINBOW_SPAWN_MIN_TURN = 20;
 const RAINBOW_SPAWN_MAX_TURN = 200;
 const RAINBOW_SPAWN_COUNT = 5;
@@ -301,6 +309,15 @@ function initStoneSpawns() {
   nextStoneSpawnTurn = randomIntRange(STONE_FIRST_MIN_TURN, STONE_FIRST_MAX_TURN);
 }
 initStoneSpawns();
+function initPortalState() {
+  portalState = {
+    active: false,
+    keys: [],
+    turnsRemaining: 0,
+    nextSpawnTurn: randomIntRange(PORTAL_FIRST_MIN_TURN, PORTAL_FIRST_MAX_TURN)
+  };
+}
+initPortalState();
 function initCloverSpawns() {
   nextCloverSpawnTurn = randomIntRange(CLOVER_SPAWN_MIN, CLOVER_SPAWN_MAX);
 }
@@ -1183,6 +1200,70 @@ function clearStone(key) {
   delete stoneByPos[key];
 }
 
+function clearPortalPair() {
+  if (!portalState?.active) return;
+  (portalState.keys || []).forEach(key => {
+    const entry = specialByPos[key];
+    if (!entry) return;
+    setCellToInactive(entry.x, entry.y);
+  });
+  portalState.active = false;
+  portalState.keys = [];
+  portalState.turnsRemaining = 0;
+  portalState.nextSpawnTurn = turnCounter + randomIntRange(PORTAL_COOLDOWN_MIN, PORTAL_COOLDOWN_MAX);
+}
+
+function getPortalEligibleKeys() {
+  const playerPositions = new Set(players.map(p => `${p.x},${p.y}`));
+  return Object.keys(grid).filter(key => {
+    if (nodeByPos[key]) return false;
+    if (resourceByPos[key]) return false;
+    if (specialByPos[key]) return false;
+    if (stoneByPos[key]) return false;
+    if (rainbowByPos[key]) return false;
+    if (cloverArtifact && cloverArtifact.key === key) return false;
+    if (masterActive && key === MASTER_CELL.key) return false;
+    if (playerPositions.has(key)) return false;
+    if (treasure && treasure.key === key) return false;
+    if (flowerArtifact && flowerArtifact.key === key) return false;
+    if (barbarianCells.some(cell => cell.key === key)) return false;
+    if (blockedCellKeys.has(key)) return false;
+    const cell = grid[key];
+    if (!cell) return false;
+    if (!cell.classList.contains("inactive")) return false;
+    return true;
+  });
+}
+
+function spawnPortalPair() {
+  if (!portalState || portalState.active) return false;
+  const eligibleKeys = getPortalEligibleKeys();
+  if (eligibleKeys.length < 2) return false;
+  const firstIndex = Math.floor(Math.random() * eligibleKeys.length);
+  const firstKey = eligibleKeys.splice(firstIndex, 1)[0];
+  const secondIndex = Math.floor(Math.random() * eligibleKeys.length);
+  const secondKey = eligibleKeys[secondIndex];
+  const [x1, y1] = firstKey.split(",").map(Number);
+  const [x2, y2] = secondKey.split(",").map(Number);
+  const placedFirst = setSpecialCell(x1, y1, PORTAL_LABEL, "portal", null, null, null, { type: "portal" });
+  const placedSecond = setSpecialCell(x2, y2, PORTAL_LABEL, "portal", null, null, null, { type: "portal" });
+  if (!placedFirst || !placedSecond) {
+    if (placedFirst) setCellToInactive(x1, y1);
+    if (placedSecond) setCellToInactive(x2, y2);
+    return false;
+  }
+  portalState.active = true;
+  portalState.keys = [firstKey, secondKey];
+  portalState.turnsRemaining = randomIntRange(PORTAL_MIN_DURATION, PORTAL_MAX_DURATION);
+  return true;
+}
+
+function getOtherPortalKey(key) {
+  if (!portalState?.active || !Array.isArray(portalState.keys)) return null;
+  if (!portalState.keys.includes(key)) return null;
+  return portalState.keys.find(entry => entry !== key) || null;
+}
+
 function clearRainbowStone(key) {
   const entry = rainbowByPos[key];
   if (!entry) return;
@@ -1369,6 +1450,26 @@ function handleRainbowTimers() {
       clearRainbowStone(entry.key);
     }
   });
+}
+
+function handlePortalTimers() {
+  if (!portalState?.active) return;
+  portalState.turnsRemaining -= 1;
+  if (portalState.turnsRemaining <= 0) {
+    clearPortalPair();
+  }
+}
+
+function handlePortalSpawns() {
+  if (!portalState) {
+    initPortalState();
+  }
+  if (portalState.active) return;
+  if (turnCounter < portalState.nextSpawnTurn) return;
+  const spawned = spawnPortalPair();
+  if (!spawned) {
+    portalState.nextSpawnTurn = turnCounter + 1;
+  }
 }
 
 function handleMasterCell() {
