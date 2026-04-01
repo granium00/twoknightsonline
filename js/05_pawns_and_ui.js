@@ -940,11 +940,14 @@ function applyStoneEffect(playerIndex) {
 if (stoneTouchBtn) {
   stoneTouchBtn.addEventListener("click", () => {
     if (shouldRoutePrivateUiActionToHost(pendingStonePlayerIndex)) {
+      const stoneKey = pendingStoneKey;
+      const stonePlayerIndex = pendingStonePlayerIndex;
+      closeStoneModal();
       emitPrivateUiActionToHost({
         modalType: "stone",
         actionType: "touch",
-        playerIndex: pendingStonePlayerIndex,
-        payload: { key: pendingStoneKey }
+        playerIndex: stonePlayerIndex,
+        payload: { key: stoneKey }
       });
       return;
     }
