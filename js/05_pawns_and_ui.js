@@ -125,7 +125,7 @@ const INVENTORY_ITEMS = [
   {key: "token", label: "Жетон", icon: "token.png", count: player => player.tokenCount || 0},
   {key: "ballista", label: "Баллиста", icon: "ballista.png", count: player => player.ballistaCount || 0, useAction: "ballista"},
   {key: "bolt", label: "Болт", icon: "ballista_bolt.png", count: player => player.boltCount || 0},
-  {key: "trap-stun", label: "Ловушка-стан", icon: "trap_stun.png", count: player => player.trapStunCount || 0, useAction: "trap-stun"},
+  {key: "trap-stun", label: "Ловушка-стан", icon: "trap_stun.png?v=1", count: player => player.trapStunCount || 0, useAction: "trap-stun"},
   {key: "ring", label: "Кольцо убеждения", icon: "ring_persuasion.png", count: player => player.ringCount || 0},
   {key: "terror-ring", label: "Кольцо ужаса", icon: "ring_terror.png", count: player => player.terrorRingCount || 0},
   {key: "rainbow-stone", label: "Радужный камень", icon: "rainbow_stone.png", count: player => player.rainbowStoneCount || 0},
