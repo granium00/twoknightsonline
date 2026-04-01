@@ -257,7 +257,8 @@ function shouldBroadcastSharedPickupToast(text) {
     "В карман: +",
     "Сокровище:",
     "Таинственный цветок",
-    "Радужный камень"
+    "Радужный камень",
+    "Тролли оглушили игрока"
   ];
   return sharedPatterns.some(pattern => text.includes(pattern));
 }
@@ -4060,7 +4061,10 @@ function doRoll() {
   lastDie2 = die2;
   const currentPlayer = players[currentPlayerIndex];
   if (currentPlayer && currentPlayer.stunnedTurnsRemaining > 0) {
-    showPickupToast("Тролли оглушили вас — пропуск хода.");
+    const stunnedPlayerLabel = typeof currentPlayer.id === "number"
+      ? `игрока ${currentPlayer.id + 1}`
+      : `игрока ${currentPlayerIndex + 1}`;
+    showPickupToast(`Тролли оглушили ${stunnedPlayerLabel} — пропуск хода.`);
     movesRemaining = 0;
     lastRoll = null;
     lastRollText = "-";
