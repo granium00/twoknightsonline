@@ -583,7 +583,7 @@
     }
     #turnCounter {
       position: fixed;
-      left: 16px;
+      right: 16px;
       bottom: 16px;
       padding: 8px 12px;
       background: rgba(17, 27, 45, 0.9);
@@ -596,7 +596,7 @@
     }
     #gameTimer {
       position: fixed;
-      left: 16px;
+      right: 16px;
       bottom: 56px;
       padding: 8px 12px;
       background: rgba(17, 27, 45, 0.9);
@@ -609,7 +609,7 @@
     }
     #newGameBtn {
       position: fixed;
-      left: 16px;
+      right: 16px;
       bottom: 96px;
       background: #2a3b55;
       color: #e9ecef;

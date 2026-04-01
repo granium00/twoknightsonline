@@ -1118,6 +1118,7 @@ function getDragonBaseKeyForPos(x, y) {
 }
 
 let gameTimerSeconds = 0;
+const GAME_TIMER_LABEL = "ВРЕМЯ";
 function formatTime(seconds) {
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;
@@ -1125,11 +1126,11 @@ function formatTime(seconds) {
 }
 
 if (gameTimerDisplay) {
-  gameTimerDisplay.textContent = `?????: ${formatTime(gameTimerSeconds)}`;
+  gameTimerDisplay.textContent = `${GAME_TIMER_LABEL}: ${formatTime(gameTimerSeconds)}`;
   setInterval(() => {
     if (gameEnded) return;
     gameTimerSeconds += 1;
-    gameTimerDisplay.textContent = `?????: ${formatTime(gameTimerSeconds)}`;
+    gameTimerDisplay.textContent = `${GAME_TIMER_LABEL}: ${formatTime(gameTimerSeconds)}`;
   }, 1000);
 }
 
@@ -4310,7 +4311,7 @@ function resetGameState() {
 
   gameTimerSeconds = 0;
   if (gameTimerDisplay) {
-    gameTimerDisplay.textContent = `?????: ${formatTime(gameTimerSeconds)}`;
+    gameTimerDisplay.textContent = `${GAME_TIMER_LABEL}: ${formatTime(gameTimerSeconds)}`;
   }
 
   updatePawns();
