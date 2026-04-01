@@ -804,6 +804,11 @@ function clearTrapMarkerAt(key) {
   if (marker) marker.remove();
 }
 
+function clearTrapStunFieldOverlays() {
+  if (typeof game === "undefined" || !game) return;
+  game.querySelectorAll(".trap-stun-field").forEach(node => node.remove());
+}
+
 function shouldRevealTrapStunField(ownerIndex) {
   if (typeof socket === "undefined" || !socket) return true;
   if (typeof onlineMatchStarted === "undefined" || !onlineMatchStarted) return true;
@@ -813,26 +818,26 @@ function shouldRevealTrapStunField(ownerIndex) {
 
 function renderTrapStunFields() {
   Object.keys(grid).forEach(clearTrapMarkerAt);
+  clearTrapStunFieldOverlays();
   trapStunFields.forEach(field => {
     if (!shouldRevealTrapStunField(field.ownerIndex)) return;
-    (field.keys || []).forEach(key => {
-      const cell = grid[key];
-      if (!cell) return;
-      let marker = cell.querySelector(".trap-stun-marker");
-      if (!marker) {
-        marker = document.createElement("div");
-        marker.className = "trap-stun-marker";
-        cell.appendChild(marker);
-      }
-      marker.textContent = "СТАН";
-      const trapOwnerColor =
-        typeof players !== "undefined" &&
-        Array.isArray(players) &&
-        players[field.ownerIndex]
-          ? players[field.ownerIndex].color
-          : "rgba(255, 99, 99, 0.9)";
-      marker.style.borderColor = trapOwnerColor;
-    });
+    if (typeof game === "undefined" || !game) return;
+    const coords = (field.keys || []).map(key => key.split(",").map(Number));
+    if (!coords.length) return;
+    const minX = Math.min(...coords.map(([x]) => x));
+    const minY = Math.min(...coords.map(([, y]) => y));
+    const overlay = document.createElement("div");
+    overlay.className = "trap-stun-field";
+    overlay.style.left = `${minX * cellSize}px`;
+    overlay.style.top = `${minY * cellSize}px`;
+    overlay.style.width = `${cellSize * 2}px`;
+    overlay.style.height = `${cellSize * 2}px`;
+    const img = document.createElement("img");
+    img.className = "trap-stun-field-icon";
+    img.src = "assets/icons/trap_stun.png?v=1";
+    img.alt = "???????-????";
+    overlay.appendChild(img);
+    game.appendChild(overlay);
   });
 }
 
