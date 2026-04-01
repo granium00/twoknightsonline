@@ -118,7 +118,7 @@ function emitLobbyState(room, io) {
 
 function tryStartRoom(room, io) {
   if (room.started) return;
-  if (room.players.some(player => !player.clientId)) return;
+  if (room.players.some(player => !player.clientId || !player.socketId)) return;
   room.started = true;
   room.latestState = null;
   room.players.forEach((player, index) => {
@@ -168,6 +168,7 @@ function attachSocketToRoomPlayer(room, socket, playerIndex, io) {
     io.to(socket.id).emit("roomJoined", { roomCode: room.code, resumed: true });
   }
   emitLobbyState(room, io);
+  tryStartRoom(room, io);
   return true;
 }
 
