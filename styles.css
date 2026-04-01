@@ -418,12 +418,12 @@
       }
     }
 
-    .player-panel {
-      padding: 14px 16px;
+.player-panel {
+      padding: clamp(10px, 0.9vw, 14px) clamp(10px, 1vw, 16px);
       background: #132030;
       border: 1px solid #2a3b55;
       border-radius: 6px;
-      font-size: 0.95em;
+      font-size: clamp(0.8rem, 0.8vw, 0.95rem);
     }
     .player-panel.active {
       border-color: #a5b4c6;
@@ -442,13 +442,13 @@
       border-radius: 50%;
       border: 1px solid #1f2b3a;
     }
-    .info-card {
+.info-card {
       margin-top: 12px;
-      padding: 10px 12px;
+      padding: clamp(8px, 0.8vw, 10px) clamp(8px, 0.9vw, 12px);
       background: #111b2d;
       border: 1px solid #1f2b3a;
       border-radius: 8px;
-      font-size: 0.8rem;
+      font-size: clamp(0.72rem, 0.72vw, 0.8rem);
       display: flex;
       flex-direction: column;
       gap: 6px;
@@ -459,8 +459,8 @@
       align-items: center;
       gap: 8px;
     }
-    .info-card strong {
-      font-size: 1.3rem;
+.info-card strong {
+      font-size: clamp(1rem, 1.1vw, 1.3rem);
       color: #ffd166;
       letter-spacing: 0.02em;
     }
@@ -581,36 +581,36 @@
       flex-direction: column;
       gap: 6px;
     }
-    #turnCounter {
+#hudDock {
       position: fixed;
       right: 16px;
       bottom: 16px;
+      z-index: 70;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
+      width: min(220px, 28vw);
+    }
+    #turnCounter {
       padding: 8px 12px;
       background: rgba(17, 27, 45, 0.9);
       border: 1px solid #2a3b55;
       border-radius: 8px;
       font-size: 0.9rem;
       color: #e2e8f0;
-      z-index: 50;
       letter-spacing: 0.02em;
     }
     #gameTimer {
-      position: fixed;
-      right: 16px;
-      bottom: 56px;
       padding: 8px 12px;
       background: rgba(17, 27, 45, 0.9);
       border: 1px solid #2a3b55;
       border-radius: 8px;
       font-size: 0.9rem;
       color: #e2e8f0;
-      z-index: 50;
       letter-spacing: 0.02em;
     }
     #newGameBtn {
-      position: fixed;
-      right: 16px;
-      bottom: 96px;
       background: #2a3b55;
       color: #e9ecef;
       border: 1px solid #1f2b3a;
@@ -620,15 +620,11 @@
       font-weight: 700;
       font-size: 0.8rem;
       letter-spacing: 0.04em;
-      z-index: 50;
-      width: auto;
-      display: inline-block;
+      width: 100%;
+      display: block;
       white-space: nowrap;
     }
     #pauseGameBtn {
-      position: fixed;
-      right: 16px;
-      bottom: 136px;
       background: #7a2e2e;
       color: #fff4f4;
       border: 1px solid #552020;
@@ -638,9 +634,8 @@
       font-weight: 700;
       font-size: 0.8rem;
       letter-spacing: 0.04em;
-      z-index: 50;
-      width: auto;
-      display: inline-block;
+      width: 100%;
+      display: block;
       white-space: nowrap;
     }
     #pauseOverlay {
@@ -1528,9 +1523,9 @@
       flex-wrap: nowrap;
       overflow-x: auto;
     }
-    .player-slot {
-      flex: 0 0 270px;
-      max-width: 270px;
+.player-slot {
+      flex: 0 0 clamp(210px, 18vw, 270px);
+      max-width: clamp(210px, 18vw, 270px);
       display: flex;
       flex-direction: column;
       gap: 12px;
