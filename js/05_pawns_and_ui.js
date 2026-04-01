@@ -3678,6 +3678,9 @@ document.addEventListener("pointerdown", unlockAudio, { once: true });
 document.addEventListener("keydown", unlockAudio, { once: true });
 
 function clearReachable() {
+  document.querySelectorAll(".cell.reachable").forEach(cell => {
+    cell.classList.remove("reachable");
+  });
   reachableKeys.forEach(key => {
     const cell = grid[key];
     if (cell) cell.classList.remove("reachable");
