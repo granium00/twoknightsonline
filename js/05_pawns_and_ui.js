@@ -715,7 +715,7 @@ function setPanelStat(panel, selector, value, visible = true) {
   elem.textContent = visible ? String(value) : HIDDEN_STAT_VALUE;
 }
 
-function shouldBroadcastSharedPickupToast(text) {
+function shouldBroadcastSharedPickupToast(text, actorPlayerIndex = null) {
   if (!text) return false;
   const sharedPatterns = [
     "В карман: +",
@@ -727,7 +727,15 @@ function shouldBroadcastSharedPickupToast(text) {
     "Без меча героя нельзя вступить в бой с драконом.",
     "Ловушка-стан оглушила игрока"
   ];
-  return sharedPatterns.some(pattern => text.includes(pattern));
+  const matchesSharedPattern = sharedPatterns.some(pattern => text.includes(pattern));
+  if (!matchesSharedPattern) return false;
+  if (!Number.isInteger(actorPlayerIndex)) return true;
+  const actor = players[actorPlayerIndex];
+  if (!actor) return true;
+  return players.every((player, index) => {
+    if (index === actorPlayerIndex || !player) return true;
+    return (player.layer || WORLD_LAYER_UPPER) === (actor.layer || WORLD_LAYER_UPPER);
+  });
 }
 
 function shouldDelegatePrivateUiToPlayer(playerIndex) {
@@ -902,8 +910,32 @@ function showPickupToast(text, options = {}) {
     socket &&
     typeof onlineMatchStarted !== "undefined" &&
     onlineMatchStarted;
-  const isSharedToast = shouldBroadcastSharedPickupToast(text);
+  let actorPlayerIndex = null;
   let privateToastPlayerIndex = null;
+  if (Number.isInteger(options.actorPlayerIndex)) {
+    actorPlayerIndex = options.actorPlayerIndex;
+  } else if (Number.isInteger(options.privatePlayerIndex)) {
+    actorPlayerIndex = options.privatePlayerIndex;
+  } else if (
+    inOnlineMatch &&
+    typeof isHost !== "undefined" &&
+    isHost &&
+    typeof currentPrivateUiPlayerIndex === "number"
+  ) {
+    actorPlayerIndex = currentPrivateUiPlayerIndex;
+  } else if (
+    inOnlineMatch &&
+    typeof isHost !== "undefined" &&
+    isHost &&
+    typeof performingRemoteAction !== "undefined" &&
+    performingRemoteAction &&
+    typeof currentPlayerIndex === "number"
+  ) {
+    actorPlayerIndex = currentPlayerIndex;
+  } else if (typeof currentPlayerIndex === "number") {
+    actorPlayerIndex = currentPlayerIndex;
+  }
+  const isSharedToast = shouldBroadcastSharedPickupToast(text, actorPlayerIndex);
   if (Number.isInteger(options.privatePlayerIndex)) {
     privateToastPlayerIndex = options.privatePlayerIndex;
   } else if (
