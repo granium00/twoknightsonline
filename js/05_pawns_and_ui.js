@@ -3931,6 +3931,9 @@ function completeTurnAdvance() {
     spawnInitialBarbarianCells();
     barbarianPhaseStarted = true;
   }
+  if (barbarianPhaseStarted && typeof ensureBarbarianCellsCount === "function") {
+    ensureBarbarianCellsCount();
+  }
   handleBarbarianRespawns();
   advanceMercenaries();
   advanceThieves();

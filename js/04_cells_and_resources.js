@@ -197,6 +197,7 @@ importantNodes.forEach(node => {
 });
 
 const RESOURCE_INTERVAL = 6;
+const RESOURCE_MIN_DISTANCE = 15;
 const resourceTypes = [
   {key: "gold", label: "З", min: 200, max: 400},
   {key: "army", label: "В", min: 5, max: 8},
@@ -723,9 +724,11 @@ function isTrollInCaveAtKey(key) {
 initTrollState();
 
 const BARBARIAN_START_TURN = 10;
+const BARBARIAN_LATE_GAME_TURN = 200;
 const BARBARIAN_RESPAWN_MIN = 10;
 const BARBARIAN_RESPAWN_MAX = 15;
 const MAX_BARBARIAN_CELLS = 3;
+const LATE_GAME_MAX_BARBARIAN_CELLS = 4;
 let turnCounter = 0;
 let barbarianPhaseStarted = false;
 let barbarianCells = [];
@@ -884,6 +887,12 @@ function clearAllResources() {
   Object.keys(resourceByPos).forEach(key => delete resourceByPos[key]);
 }
 
+function getManhattanDistance(keyA, keyB) {
+  const [x1, y1] = keyA.split(",").map(Number);
+  const [x2, y2] = keyB.split(",").map(Number);
+  return Math.abs(x1 - x2) + Math.abs(y1 - y2);
+}
+
 function spawnResources() {
   clearAllResources();
   const emptyKeys = [];
@@ -915,10 +924,15 @@ function spawnResources() {
       typesToSpawn.push(armyType);
     }
   }
+  const shuffledKeys = emptyKeys.slice().sort(() => Math.random() - 0.5);
+  const pickedResourceKeys = [];
   for (const type of typesToSpawn) {
-    if (emptyKeys.length === 0) break;
-    const pickIndex = Math.floor(Math.random() * emptyKeys.length);
-    const key = emptyKeys.splice(pickIndex, 1)[0];
+    const key = shuffledKeys.find(candidateKey =>
+      !pickedResourceKeys.includes(candidateKey) &&
+      pickedResourceKeys.every(existingKey => getManhattanDistance(existingKey, candidateKey) >= RESOURCE_MIN_DISTANCE)
+    );
+    if (!key) continue;
+    pickedResourceKeys.push(key);
     const [xStr, yStr] = key.split(",");
     const x = Number(xStr);
     const y = Number(yStr);
@@ -989,8 +1003,12 @@ function getAvailableBarbarianKeys() {
   return emptyKeys;
 }
 
+function getBarbarianCellLimit() {
+  return turnCounter >= BARBARIAN_LATE_GAME_TURN ? LATE_GAME_MAX_BARBARIAN_CELLS : MAX_BARBARIAN_CELLS;
+}
+
 function spawnBarbarianCell() {
-  if (barbarianCells.length >= MAX_BARBARIAN_CELLS) return false;
+  if (barbarianCells.length >= getBarbarianCellLimit()) return false;
   const availableKeys = getAvailableBarbarianKeys();
   if (availableKeys.length === 0) return false;
   const pickIndex = Math.floor(Math.random() * availableKeys.length);
@@ -1014,7 +1032,13 @@ function spawnBarbarianCell() {
 }
 
 function spawnInitialBarbarianCells() {
-  while (barbarianCells.length < MAX_BARBARIAN_CELLS) {
+  while (barbarianCells.length < getBarbarianCellLimit()) {
+    if (!spawnBarbarianCell()) break;
+  }
+}
+
+function ensureBarbarianCellsCount() {
+  while (barbarianCells.length < getBarbarianCellLimit()) {
     if (!spawnBarbarianCell()) break;
   }
 }
