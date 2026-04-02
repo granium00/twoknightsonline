@@ -243,31 +243,39 @@ function createUnderworldStateForPlayer(playerIndex) {
   const player = players[playerIndex];
   if (!player) return null;
   const reserved = new Set([`${player.x},${player.y}`]);
-  const available = [];
+  const resourceAvailable = [];
+  const stairsAvailable = [];
   for (let y = 0; y < ROWS; y++) {
     for (let x = 0; x < COLS; x++) {
       const key = `${x},${y}`;
       if (reserved.has(key)) continue;
-      available.push(key);
+      resourceAvailable.push(key);
+      if (!blockedCellKeys.has(key)) {
+        stairsAvailable.push(key);
+      }
     }
   }
-  for (let i = available.length - 1; i > 0; i -= 1) {
+  for (let i = resourceAvailable.length - 1; i > 0; i -= 1) {
     const j = Math.floor(Math.random() * (i + 1));
-    [available[i], available[j]] = [available[j], available[i]];
+    [resourceAvailable[i], resourceAvailable[j]] = [resourceAvailable[j], resourceAvailable[i]];
+  }
+  for (let i = stairsAvailable.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [stairsAvailable[i], stairsAvailable[j]] = [stairsAvailable[j], stairsAvailable[i]];
   }
   const resources = {};
   let cursor = 0;
-  for (let i = 0; i < UNDERWORLD_GOLD_COUNT && cursor < available.length; i += 1, cursor += 1) {
-    const key = available[cursor];
+  for (let i = 0; i < UNDERWORLD_GOLD_COUNT && cursor < resourceAvailable.length; i += 1, cursor += 1) {
+    const key = resourceAvailable[cursor];
     const [x, y] = key.split(",").map(Number);
     resources[key] = { key, x, y, typeKey: "gold" };
   }
-  for (let i = 0; i < UNDERWORLD_RESOURCES_COUNT && cursor < available.length; i += 1, cursor += 1) {
-    const key = available[cursor];
+  for (let i = 0; i < UNDERWORLD_RESOURCES_COUNT && cursor < resourceAvailable.length; i += 1, cursor += 1) {
+    const key = resourceAvailable[cursor];
     const [x, y] = key.split(",").map(Number);
     resources[key] = { key, x, y, typeKey: "resources" };
   }
-  const stairsKey = cursor < available.length ? available[cursor] : `${player.x},${player.y}`;
+  const stairsKey = stairsAvailable.find(key => !resources[key]) || `${player.x},${player.y}`;
   const [stairsX, stairsY] = stairsKey.split(",").map(Number);
   return {
     resourcesByPos: resources,

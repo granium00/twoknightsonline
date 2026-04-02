@@ -113,7 +113,7 @@ function clearCellIcon(cell) {
 function restoreImportantNodeCell(key, cell) {
   const node = nodeByPos[key];
   if (!node || !cell) return false;
-  cell.classList.remove("inactive", "special", "resource-disabled", "mercenary", "thief", "mage", "portal", "flower", "clover", "stone", "rainbow-stone", "master", "troll", "troll-cave", "treasure");
+  cell.classList.remove("inactive", "special", "resource-disabled", "mercenary", "thief", "cutthroat", "mage", "portal", "wormhole", "stairs", "flower", "clover", "stone", "rainbow-stone", "master", "troll", "troll-cave", "treasure");
   cell.classList.add("important", node.type);
   cell.textContent = node.label || node.id || "";
   clearCellIcon(cell);
@@ -655,6 +655,7 @@ function handleTrollsTurn() {
         player: p,
         dist: Math.abs(p.x - trollState.x) + Math.abs(p.y - trollState.y)
       }))
+      .filter(entry => (entry.player.layer || WORLD_LAYER_UPPER) !== WORLD_LAYER_UNDER)
       .filter(entry => entry.dist <= 5)
       .filter(entry => (entry.player.invisTurnsRemaining || 0) <= 0)
       .sort((a, b) => a.dist - b.dist);
@@ -767,7 +768,7 @@ function setCellToInactive(x, y, {skipTreasureCleanup = false} = {}) {
     clearTreasure();
     return;
   }
-  cell.classList.remove("resource", "important", "owned", "reachable", "barbarian", "special", "forest", "resource-disabled", "mercenary", "thief", "mage", "portal", "flower", "clover", "stone", "rainbow-stone", "master", "troll", "troll-cave", "treasure");
+  cell.classList.remove("resource", "important", "owned", "reachable", "barbarian", "special", "forest", "resource-disabled", "mercenary", "thief", "cutthroat", "mage", "portal", "wormhole", "stairs", "flower", "clover", "stone", "rainbow-stone", "master", "troll", "troll-cave", "treasure");
   cell.classList.add("inactive");
   cell.textContent = "";
   clearCellIcon(cell);
