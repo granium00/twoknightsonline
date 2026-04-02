@@ -533,6 +533,7 @@ function applyMaster() {
   const key = MASTER_CELL.key;
   const cell = grid[key];
   if (!cell) return;
+  masterActive = true;
   cell.classList.remove("inactive");
   cell.classList.add("master", "important");
   cell.textContent = "";
