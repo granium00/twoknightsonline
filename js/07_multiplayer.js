@@ -359,6 +359,7 @@ function buildState() {
     pendingTurnAdvance,
     pendingTurnManualOnly,
     deferredPrivateTurnPlayerIndex,
+    ballistaModePlayerIndex,
     reachableKeys: Array.from(reachableKeys),
     castleOwnersByKey: shallowClone(castleOwnersByKey),
     castleStatsByKey: shallowClone(castleStatsByKey)
@@ -632,6 +633,7 @@ function applyState(state) {
   pendingTurnAdvance = state.pendingTurnAdvance ?? pendingTurnAdvance;
   pendingTurnManualOnly = state.pendingTurnManualOnly ?? pendingTurnManualOnly;
   deferredPrivateTurnPlayerIndex = state.deferredPrivateTurnPlayerIndex ?? deferredPrivateTurnPlayerIndex;
+  ballistaModePlayerIndex = Number.isInteger(state.ballistaModePlayerIndex) ? state.ballistaModePlayerIndex : null;
   upperWormhole = state.upperWormhole ?? upperWormhole;
   wormholeSpawnTurns = Array.isArray(state.wormholeSpawnTurns) ? state.wormholeSpawnTurns.slice() : wormholeSpawnTurns;
   wormholeSpawnIndex = state.wormholeSpawnIndex ?? wormholeSpawnIndex;
@@ -743,7 +745,11 @@ function applyState(state) {
 
   clearReachable();
   reachableKeys = new Set(state.reachableKeys || []);
-  showReachable();
+  if (ballistaModePlayerIndex === currentPlayerIndex && typeof showBallistaRange === "function") {
+    showBallistaRange(ballistaModePlayerIndex);
+  } else {
+    showReachable();
+  }
 
   updatePanelTitles();
   updatePawns();

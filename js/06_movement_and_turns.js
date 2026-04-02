@@ -23,6 +23,10 @@ game.addEventListener("click", e => {
 
   const key = `${gridX},${gridY}`;
   const currentPlayer = players[currentPlayerIndex];
+  if (ballistaModePlayerIndex === currentPlayerIndex) {
+    tryBallistaShot(gridX, gridY);
+    return;
+  }
   if ((currentPlayer.layer || WORLD_LAYER_UPPER) === WORLD_LAYER_UNDER) {
     if (gridX === currentPlayer.x && gridY === currentPlayer.y) {
       return;
