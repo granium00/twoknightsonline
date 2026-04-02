@@ -1356,16 +1356,24 @@ function goldPriceHtml(cost) {
 
 function flashPrice(btn, amountText, iconSrc, iconAlt) {
   if (!btn) return;
-  const target = btn.querySelector(".trade-price") || btn;
   const flash = document.createElement("span");
   flash.className = "price-flash";
   flash.innerHTML =
     `<span class="price-minus">-${amountText}</span>` +
     `<img class="price-icon" src="${iconSrc}" alt="${iconAlt || ""}" />`;
-  target.appendChild(flash);
-  setTimeout(() => {
-    flash.remove();
-  }, 900);
+  const attachFlash = () => {
+    const target = btn.querySelector(".trade-price") || btn;
+    if (!target || !btn.isConnected) return;
+    target.appendChild(flash);
+    setTimeout(() => {
+      flash.remove();
+    }, 900);
+  };
+  if (typeof requestAnimationFrame === "function") {
+    requestAnimationFrame(() => requestAnimationFrame(attachFlash));
+  } else {
+    setTimeout(attachFlash, 0);
+  }
 }
 
 function spendGold(player, amount) {
