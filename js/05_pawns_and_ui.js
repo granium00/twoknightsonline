@@ -552,12 +552,16 @@ function applyPotion(playerIndex, type) {
     if (playerIndex !== currentPlayerIndex) return;
     if ((player.ballistaCount || 0) <= 0) return;
     if ((player.boltCount || 0) <= 0) {
-      showPickupToast("Нет болтов для баллисты.");
+      showPrivatePickupToastForPlayer(playerIndex, "Нет болтов для баллисты.");
       return;
     }
     ballistaModePlayerIndex = playerIndex;
-    showPickupToast("Режим баллисты активирован. Выберите цель.");
-    showBallistaRange();
+    if (shouldDelegatePrivateUiToPlayer(playerIndex)) {
+      emitPrivateUiToPlayer(playerIndex, "activateBallistaMode", { playerIndex });
+    } else {
+      showBallistaRange(playerIndex);
+    }
+    showPrivatePickupToastForPlayer(playerIndex, "Режим баллисты активирован. Выберите цель.");
     updateInventory(playerIndex);
     return;
   }
@@ -645,10 +649,14 @@ function placeTrapStun(playerIndex) {
 function cancelBallistaMode(playerIndex) {
   if (ballistaModePlayerIndex !== playerIndex) return;
   ballistaModePlayerIndex = null;
-  clearReachable();
-  showReachable();
+  if (shouldDelegatePrivateUiToPlayer(playerIndex)) {
+    emitPrivateUiToPlayer(playerIndex, "clearBallistaMode", { playerIndex });
+  } else {
+    clearReachable();
+    showReachable();
+  }
   updateInventory(playerIndex);
-  showPickupToast("Режим баллисты отменен.");
+  showPrivatePickupToastForPlayer(playerIndex, "Режим баллисты отменен.");
 }
 
 function tryBallistaShot(gridX, gridY) {
@@ -660,29 +668,36 @@ function tryBallistaShot(gridX, gridY) {
     (p, idx) => idx !== ballistaModePlayerIndex && p.x === gridX && p.y === gridY
   );
   if (targetIndex === -1) {
-    showPickupToast("Выберите игрока для выстрела.");
+    showPrivatePickupToastForPlayer(ballistaModePlayerIndex, "Выберите игрока для выстрела.");
     return true;
   }
   const dist = Math.abs(attacker.x - gridX) + Math.abs(attacker.y - gridY);
   if (dist > BALLISTA_RANGE) {
-    showPickupToast("Цель слишком далеко для баллисты.");
+    showPrivatePickupToastForPlayer(ballistaModePlayerIndex, "Цель слишком далеко для баллисты.");
     return true;
   }
   if ((attacker.boltCount || 0) <= 0) {
-    showPickupToast("Нет болтов для баллисты.");
+    showPrivatePickupToastForPlayer(ballistaModePlayerIndex, "Нет болтов для баллисты.");
     cancelBallistaMode(ballistaModePlayerIndex);
     return true;
   }
   const target = players[targetIndex];
+  const shooterIndex = ballistaModePlayerIndex;
   const damage = Math.floor(Math.random() * (BALLISTA_DAMAGE_MAX - BALLISTA_DAMAGE_MIN + 1)) + BALLISTA_DAMAGE_MIN;
   const beforeArmy = Math.max(0, target.pocket.army || 0);
   const killed = Math.min(beforeArmy, damage);
   target.pocket.army = beforeArmy - killed;
   attacker.boltCount -= 1;
-  updatePlayerResources(ballistaModePlayerIndex);
+  if (shouldDelegatePrivateUiToPlayer(shooterIndex)) {
+    emitPrivateUiToPlayer(shooterIndex, "clearBallistaMode", { playerIndex: shooterIndex });
+  } else {
+    clearReachable();
+    showReachable();
+  }
+  updatePlayerResources(shooterIndex);
   updatePlayerResources(targetIndex);
-  updateInventory(ballistaModePlayerIndex);
-  showPickupToast(`Баллиста: -${killed} войск в кармане противника.`);
+  updateInventory(shooterIndex);
+  showPrivatePickupToastForPlayer(shooterIndex, `Баллиста: -${killed} войск в кармане противника.`);
   ballistaModePlayerIndex = null;
   endTurn();
   return true;
@@ -855,7 +870,17 @@ function updateInventory(playerIndex) {
       btn.className = "inventory-use";
       if (item.useAction === "ballista" && ballistaModePlayerIndex === playerIndex) {
         btn.textContent = "Отменить";
-        btn.addEventListener("click", () => cancelBallistaMode(playerIndex));
+        btn.addEventListener("click", () => {
+          if (shouldRoutePrivateUiActionToHost(playerIndex)) {
+            emitPrivateUiActionToHost({
+              modalType: "inventory",
+              actionType: "cancelBallista",
+              playerIndex
+            });
+            return;
+          }
+          cancelBallistaMode(playerIndex);
+        });
       } else {
         btn.textContent = "Применить";
         btn.addEventListener("click", () => {
@@ -5217,13 +5242,13 @@ function updateTurnUI() {
   refreshTurnControls();
 }
 
-function showBallistaRange() {
+function showBallistaRange(playerIndex = currentPlayerIndex) {
   clearReachable();
-  const currentPlayer = players[currentPlayerIndex];
-  if (!currentPlayer) return;
+  const player = players[playerIndex];
+  if (!player) return;
   for (let y = 0; y < ROWS; y++) {
     for (let x = 0; x < COLS; x++) {
-      const dist = Math.abs(x - currentPlayer.x) + Math.abs(y - currentPlayer.y);
+      const dist = Math.abs(x - player.x) + Math.abs(y - player.y);
       if (dist === 0 || dist > BALLISTA_RANGE) continue;
       const key = `${x},${y}`;
       const cell = grid[key];

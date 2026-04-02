@@ -970,6 +970,10 @@ function performPrivateUiAction(action) {
     return;
   }
   if (modalType === "inventory") {
+    if (actionType === "cancelBallista" && typeof cancelBallistaMode === "function") {
+      cancelBallistaMode(playerIndex);
+      return;
+    }
     if (actionType === "use" && payload.useAction && typeof applyPotion === "function") {
       applyPotion(playerIndex, payload.useAction);
     }
@@ -1342,6 +1346,33 @@ if (socket) {
     }
     if (type === "showPickupToast" && typeof showPickupToast === "function") {
       showPickupToast(String(payload.text || ""), { skipBroadcast: true });
+      return;
+    }
+    if (type === "activateBallistaMode") {
+      if (Number.isInteger(payload.playerIndex)) {
+        ballistaModePlayerIndex = payload.playerIndex;
+        if (typeof showBallistaRange === "function") {
+          showBallistaRange(payload.playerIndex);
+        }
+        if (typeof updateInventory === "function") {
+          updateInventory(payload.playerIndex);
+        }
+      }
+      return;
+    }
+    if (type === "clearBallistaMode") {
+      if (!Number.isInteger(payload.playerIndex) || ballistaModePlayerIndex === payload.playerIndex) {
+        ballistaModePlayerIndex = null;
+      }
+      if (typeof clearReachable === "function") {
+        clearReachable();
+      }
+      if (typeof showReachable === "function") {
+        showReachable();
+      }
+      if (Number.isInteger(payload.playerIndex) && typeof updateInventory === "function") {
+        updateInventory(payload.playerIndex);
+      }
       return;
     }
     if (type === "clearWormholeVisual") {
