@@ -198,7 +198,6 @@ importantNodes.forEach(node => {
 
 const RESOURCE_INTERVAL = 6;
 const RESOURCE_MIN_DISTANCE = 15;
-const RESOURCE_SPAWN_ATTEMPTS = 600;
 const resourceTypes = [
   {key: "gold", label: "З", min: 200, max: 400},
   {key: "army", label: "В", min: 5, max: 8},
@@ -895,21 +894,30 @@ function getManhattanDistance(keyA, keyB) {
 }
 
 function pickResourceSpawnKeys(emptyKeys, requiredCount, minDistance) {
-  for (let attempt = 0; attempt < RESOURCE_SPAWN_ATTEMPTS; attempt++) {
-    const availableKeys = emptyKeys.slice().sort(() => Math.random() - 0.5);
-    const pickedKeys = [];
-    for (const candidateKey of availableKeys) {
+  const shuffledKeys = emptyKeys.slice().sort(() => Math.random() - 0.5);
+
+  function search(startIndex, pickedKeys) {
+    if (pickedKeys.length >= requiredCount) {
+      return pickedKeys.slice();
+    }
+    const remainingNeeded = requiredCount - pickedKeys.length;
+    for (let index = startIndex; index <= shuffledKeys.length - remainingNeeded; index++) {
+      const candidateKey = shuffledKeys[index];
       const fits = pickedKeys.every(existingKey =>
         getManhattanDistance(existingKey, candidateKey) >= minDistance
       );
       if (!fits) continue;
       pickedKeys.push(candidateKey);
-      if (pickedKeys.length >= requiredCount) {
-        return pickedKeys;
+      const result = search(index + 1, pickedKeys);
+      if (result.length >= requiredCount) {
+        return result;
       }
+      pickedKeys.pop();
     }
+    return [];
   }
-  return [];
+
+  return search(0, []);
 }
 
 function spawnResources() {
