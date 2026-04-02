@@ -1313,9 +1313,11 @@ if (socket) {
         );
       };
       if (typeof requestAnimationFrame === "function") {
-        requestAnimationFrame(() => requestAnimationFrame(scheduleFlash));
+        setTimeout(() => {
+          requestAnimationFrame(() => requestAnimationFrame(scheduleFlash));
+        }, 120);
       } else {
-        setTimeout(scheduleFlash, 0);
+        setTimeout(scheduleFlash, 120);
       }
       return;
     }
