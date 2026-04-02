@@ -28,6 +28,7 @@ const players = [
     trollClubCount: 0,
     flowerCount: 0,
     tokenCount: 0,
+    bootsCount: 0,
     ballistaCount: 0,
     boltCount: 0,
     ringCount: 0,
@@ -65,6 +66,7 @@ const players = [
     trollClubCount: 0,
     flowerCount: 0,
     tokenCount: 0,
+    bootsCount: 0,
     ballistaCount: 0,
     boltCount: 0,
     ringCount: 0,
@@ -123,6 +125,7 @@ const INVENTORY_ITEMS = [
   {key: "clover", label: "Клевер", icon: "clover.png", count: player => player.cloverCount || 0},
   {key: "flower", label: "Таинственный цветок", icon: "mystic_flower.png", count: player => player.flowerCount || 0},
   {key: "token", label: "Жетон", icon: "token.png", count: player => player.tokenCount || 0},
+  {key: "boots", label: "Сапоги", icon: "boots.png", count: player => player.bootsCount || 0},
   {key: "ballista", label: "Баллиста", icon: "ballista.png", count: player => player.ballistaCount || 0, useAction: "ballista"},
   {key: "bolt", label: "Болт", icon: "ballista_bolt.png", count: player => player.boltCount || 0},
   {key: "trap-stun", label: "Ловушка-стан", icon: "trap_stun.png?v=1", count: player => player.trapStunCount || 0, useAction: "trap-stun"},
@@ -1562,11 +1565,14 @@ function syncLavkaModalState(playerIndex) {
   if (!player) return;
   const gold = getTotalGold(player);
   const costPotion = getDiscountedGoldCost(player, 250);
+  const costBoots = getDiscountedGoldCost(player, 1000);
   lavkaButtons.forEach(btn => {
     const type = btn.getAttribute("data-lavka-buy");
     if (type === "res-1000-infl") btn.disabled = getTotalResources(player) < 1000;
+    if (type === "boots") btn.disabled = gold < costBoots;
     if (type === "potion-invis") btn.disabled = gold < costPotion;
     if (type === "potion-luck") btn.disabled = gold < costPotion;
+    if (type === "boots") setTradePrice(btn, goldPriceHtml(costBoots));
     if (type === "potion-invis") setTradePrice(btn, goldPriceHtml(costPotion));
     if (type === "potion-luck") setTradePrice(btn, goldPriceHtml(costPotion));
   });
@@ -1611,6 +1617,14 @@ lavkaButtons.forEach(btn => {
       player.resources.influence += 300;
       showPickupToast("Получено 300 влияния.");
       flashPrice(btn, 1000, "assets/icons/icon-resources.png", "Ресурсы");
+    }
+    if (type === "boots") {
+      const cost = getDiscountedGoldCost(player, 1000);
+      if (getTotalGold(player) < cost) return;
+      spendGold(player, cost);
+      player.bootsCount = (player.bootsCount || 0) + 1;
+      showPickupToast("Сапоги добавлены в инвентарь.");
+      flashPrice(btn, cost, "assets/icons/icon-gold.png", "Золото");
     }
     if (type === "potion-invis") {
       const cost = getDiscountedGoldCost(player, 250);
@@ -4503,10 +4517,17 @@ function doRoll() {
     return;
   }
   const stoneBonusActive = currentPlayer && currentPlayer.stoneBonusRollsRemaining > 0;
-  const bonus = stoneBonusActive ? 1 : 0;
+  const stoneBonus = stoneBonusActive ? 1 : 0;
+  const bootsBonus = currentPlayer && (currentPlayer.bootsCount || 0) > 0 ? 3 : 0;
+  const bonus = stoneBonus + bootsBonus;
   const roll = die1 + die2 + bonus;
   lastRoll = roll;
-  lastRollText = bonus > 0 ? `${die1} + ${die2} + 1 = ${roll}` : `${die1} + ${die2} = ${roll}`;
+  const bonusParts = [];
+  if (stoneBonus > 0) bonusParts.push("1");
+  if (bootsBonus > 0) bonusParts.push("3");
+  lastRollText = bonusParts.length
+    ? `${die1} + ${die2} + ${bonusParts.join(" + ")} = ${roll}`
+    : `${die1} + ${die2} = ${roll}`;
   if (stoneBonusActive && currentPlayer) {
     currentPlayer.stoneBonusRollsRemaining = Math.max(0, currentPlayer.stoneBonusRollsRemaining - 1);
   }
@@ -4597,6 +4618,7 @@ function resetGameState() {
     player.trollClubCount = 0;
     player.flowerCount = 0;
     player.tokenCount = 0;
+    player.bootsCount = 0;
     player.ballistaCount = 0;
     player.boltCount = 0;
     player.ringCount = 0;
