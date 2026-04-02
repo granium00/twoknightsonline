@@ -24,6 +24,7 @@ function ensureCastleStats(key) {
       wall: false,
       lumber: false,
       mine: false,
+      mineLevel: 0,
       clay: false,
       storageArmy: 0,
       armorCurrent: null,
@@ -58,9 +59,15 @@ function ensureCastleStats(key) {
       stats.healthCurrent = stats.health;
     }
   }
+  stats.mineLevel = Math.max(0, Math.min(2, Number(stats.mineLevel) || 0));
+  if (stats.mineLevel === 0 && stats.mine) {
+    stats.mineLevel = 1;
+  }
+  stats.mine = stats.mineLevel > 0;
   stats.income =
     (stats.lumber ? CASTLE_FEATURES.lumber.income : 0) +
-    (stats.mine ? CASTLE_FEATURES.mine.income : 0) +
+    (stats.mineLevel >= 1 ? CASTLE_FEATURES.mine.income : 0) +
+    (stats.mineLevel >= 2 ? 25 : 0) +
     (stats.clay ? CASTLE_FEATURES.clay.income : 0);
   return stats;
 }

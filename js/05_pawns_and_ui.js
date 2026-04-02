@@ -121,6 +121,8 @@ const TRAP_STUN_DURATION = 3;
 const BALLISTA_RANGE = 11;
 const BALLISTA_DAMAGE_MIN = 9;
 const BALLISTA_DAMAGE_MAX = 13;
+const CASTLE_MINE_LEVEL_2_COST = 600;
+const CASTLE_MINE_LEVEL_2_INCOME = 25;
 let ballistaModePlayerIndex = null;
 const INVENTORY_ITEMS = [
   {key: "poison", label: "Яд", icon: "poison.png", count: player => player.poisonCount || 0},
@@ -1866,8 +1868,11 @@ function recalcPlayerResourceIncome(playerIndex) {
       if (stats.lumber && !isSpecialFeatureDisabled(playerIndex, "lumber", key)) {
         total += CASTLE_FEATURES.lumber.income;
       }
-      if (stats.mine && !isSpecialFeatureDisabled(playerIndex, "mine", key)) {
+      if ((stats.mineLevel || 0) >= 1 && !isSpecialFeatureDisabled(playerIndex, "mine", key)) {
         total += CASTLE_FEATURES.mine.income;
+      }
+      if ((stats.mineLevel || 0) >= 2 && !isSpecialFeatureDisabled(playerIndex, "mine", key)) {
+        total += CASTLE_MINE_LEVEL_2_INCOME;
       }
       if (stats.clay && !isSpecialFeatureDisabled(playerIndex, "clay", key)) {
         total += CASTLE_FEATURES.clay.income;
@@ -4171,11 +4176,33 @@ function refreshCastleModal(key, playerIndex) {
       const feature = btn.dataset.castleFeature;
       const def = CASTLE_FEATURES[feature];
       if (!def) return;
-      const purchased = stats[feature];
-      btn.disabled = purchased || playerResources < (def?.cost || 0);
+      let buttonCost = def.cost;
+      let purchased = stats[feature];
+      if (feature === "mine") {
+        const mineLevel = stats.mineLevel || 0;
+        const canUpgradeMine = mineLevel === 1 && stats.lumber === true && stats.clay === true;
+        if (mineLevel >= 2) {
+          purchased = true;
+        } else if (canUpgradeMine) {
+          purchased = false;
+          buttonCost = CASTLE_MINE_LEVEL_2_COST;
+        } else {
+          purchased = mineLevel >= 1;
+        }
+        const costLabel = btn.querySelector("span");
+        if (costLabel) {
+          costLabel.textContent = String(buttonCost);
+        }
+      }
+      btn.disabled = purchased || playerResources < buttonCost;
       const statusElem = castleFeatureStatusElems[feature];
       if (statusElem) {
-        statusElem.textContent = purchased ? "Куплено" : "";
+        if (feature === "mine") {
+          const mineLevel = stats.mineLevel || 0;
+          statusElem.textContent = mineLevel >= 2 ? "Ур. 2" : mineLevel === 1 ? "Ур. 1" : "";
+        } else {
+          statusElem.textContent = purchased ? "Куплено" : "";
+        }
       }
     });
     if (castleWithdrawArmy) {
@@ -4236,15 +4263,37 @@ function buyCastleFeature(featureKey) {
   if (!castleModalKey || castleModalPlayerIndex === null) return;
   const stats = ensureCastleStats(castleModalKey);
   const player = players[castleModalPlayerIndex];
-  const featureDef = CASTLE_FEATURES[featureKey];
-  if (!featureDef || stats[featureKey]) return;
+  let featureDef = CASTLE_FEATURES[featureKey];
+  if (!featureDef) return;
+  let shouldPlaceSpecialCell = false;
+  if (featureKey === "mine") {
+    const mineLevel = stats.mineLevel || 0;
+    if (mineLevel <= 0) {
+      featureDef = CASTLE_FEATURES.mine;
+      shouldPlaceSpecialCell = true;
+    } else {
+      const canUpgradeMine = stats.lumber === true && stats.clay === true;
+      if (!canUpgradeMine || mineLevel >= 2) return;
+      featureDef = { cost: CASTLE_MINE_LEVEL_2_COST, label: "Шахта ур. 2" };
+    }
+  } else {
+    if (stats[featureKey]) return;
+    shouldPlaceSpecialCell = true;
+  }
   if (!player || player.resources.resources < featureDef.cost) return;
   player.resources.resources -= featureDef.cost;
-  stats[featureKey] = true;
+  if (featureKey === "mine") {
+    stats.mineLevel = Math.min(2, (stats.mineLevel || 0) + 1);
+    stats.mine = true;
+  } else {
+    stats[featureKey] = true;
+  }
   ensureCastleStats(castleModalKey);
   updatePlayerResources(castleModalPlayerIndex);
   updateCastleBadge(castleModalKey);
-  applyCastleFeatureSpecialCell(castleModalKey, featureKey);
+  if (shouldPlaceSpecialCell) {
+    applyCastleFeatureSpecialCell(castleModalKey, featureKey);
+  }
   showPickupToast(`Покупка: ${featureDef.label}`);
   recalcPlayerResourceIncome(castleModalPlayerIndex);
   refreshCastleModal(castleModalKey, castleModalPlayerIndex);
