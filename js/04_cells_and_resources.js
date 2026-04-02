@@ -199,6 +199,7 @@ importantNodes.forEach(node => {
 const RESOURCE_INTERVAL = 6;
 const RESOURCE_MIN_DISTANCE = 15;
 const RESOURCE_FALLBACK_MIN_DISTANCE = 1;
+const RESOURCE_SPAWN_ATTEMPTS = 600;
 const resourceTypes = [
   {key: "gold", label: "З", min: 200, max: 400},
   {key: "army", label: "В", min: 5, max: 8},
@@ -895,19 +896,28 @@ function getManhattanDistance(keyA, keyB) {
 }
 
 function pickResourceSpawnKeys(emptyKeys, requiredCount, minDistance) {
-  const availableKeys = emptyKeys.slice();
-  const pickedKeys = [];
-  while (availableKeys.length && pickedKeys.length < requiredCount) {
-    const pickIndex = Math.floor(Math.random() * availableKeys.length);
-    const pickedKey = availableKeys.splice(pickIndex, 1)[0];
-    pickedKeys.push(pickedKey);
-    for (let i = availableKeys.length - 1; i >= 0; i--) {
-      if (getManhattanDistance(pickedKey, availableKeys[i]) < minDistance) {
-        availableKeys.splice(i, 1);
+  let bestKeys = [];
+  for (let attempt = 0; attempt < RESOURCE_SPAWN_ATTEMPTS; attempt++) {
+    const availableKeys = emptyKeys.slice();
+    const pickedKeys = [];
+    while (availableKeys.length && pickedKeys.length < requiredCount) {
+      const pickIndex = Math.floor(Math.random() * availableKeys.length);
+      const pickedKey = availableKeys.splice(pickIndex, 1)[0];
+      pickedKeys.push(pickedKey);
+      for (let i = availableKeys.length - 1; i >= 0; i--) {
+        if (getManhattanDistance(pickedKey, availableKeys[i]) < minDistance) {
+          availableKeys.splice(i, 1);
+        }
       }
     }
+    if (pickedKeys.length >= requiredCount) {
+      return pickedKeys;
+    }
+    if (pickedKeys.length > bestKeys.length) {
+      bestKeys = pickedKeys;
+    }
   }
-  return pickedKeys;
+  return bestKeys;
 }
 
 function spawnResources() {
