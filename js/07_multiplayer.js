@@ -1341,6 +1341,18 @@ if (socket) {
       showPickupToast(String(payload.text || ""), { skipBroadcast: true });
       return;
     }
+    if (type === "clearWormholeVisual") {
+      if (typeof upperWormhole !== "undefined") {
+        upperWormhole = null;
+      }
+      if (typeof clearRenderedWormholes === "function") {
+        clearRenderedWormholes();
+      }
+      if (typeof refreshVisibleWorld === "function") {
+        refreshVisibleWorld();
+      }
+      return;
+    }
     if (type === "showBarracksModal" && typeof openBarracks === "function") {
       openBarracks(payload.playerIndex);
       return;

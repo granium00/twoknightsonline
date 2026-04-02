@@ -149,6 +149,7 @@ const WORMHOLE_ICON = { file: "wormhole.png", alt: "Червоточина" };
 const STAIRS_ICON = { file: "stairs.png", alt: "Лестница" };
 const UNDERWORLD_GOLD_COUNT = 5;
 const UNDERWORLD_RESOURCES_COUNT = 3;
+const UNDERWORLD_REWARD_MULTIPLIER = 1.7;
 const WORMHOLE_MIN_SPAWNS = 1;
 const WORMHOLE_MAX_SPAWNS = 3;
 const WORMHOLE_MAX_SPAWN_TURN = 250;
@@ -506,6 +507,20 @@ function enterUnderworld(playerIndex) {
   if (typeof emitStateNow === "function") {
     emitStateNow(true);
   }
+  if (
+    typeof socket !== "undefined" &&
+    socket &&
+    typeof onlineMatchStarted !== "undefined" &&
+    onlineMatchStarted &&
+    typeof isHost !== "undefined" &&
+    isHost &&
+    typeof emitPrivateUiToPlayer === "function"
+  ) {
+    players.forEach((_, index) => {
+      if (index === playerIndex) return;
+      emitPrivateUiToPlayer(index, "clearWormholeVisual", {});
+    });
+  }
   showPrivatePickupToastForPlayer(playerIndex, "Червоточина утащила вас на нижний уровень.");
   return true;
 }
@@ -770,7 +785,11 @@ function showPrivatePickupToastForPlayer(playerIndex, text) {
     emitPrivateUiToPlayer(playerIndex, "showPickupToast", { text });
     return;
   }
-  showPickupToast(text);
+  showPickupToast(text, {
+    skipBroadcast: true,
+    privatePlayerIndex: playerIndex,
+    actorPlayerIndex: playerIndex
+  });
 }
 
 function updateInventory(playerIndex) {
@@ -4823,6 +4842,7 @@ function finalizeMove(gridX, gridY) {
       } else if (typeKey === "resources") {
         amount = Math.floor(Math.random() * (30 - 20 + 1)) + 20;
       }
+      amount = Math.max(1, Math.floor(amount * UNDERWORLD_REWARD_MULTIPLIER));
       currentPlayer.pocket[typeKey] += amount;
       delete underworldState.resourcesByPos[key];
       updatePlayerResources(currentPlayerIndex);
