@@ -86,6 +86,19 @@ function updateDebugOverlay() {
     `hostActionAt=${lastHostActionAt || "-"}`,
     `clientActionAt=${lastClientActionAt || "-"}`
   ];
+  if (typeof resourceSpawnDebug !== "undefined" && resourceSpawnDebug) {
+    lines.push(
+      "",
+      "=== RESOURCE SPAWN ===",
+      `turn=${resourceSpawnDebug.turn ?? "-"}`,
+      `emptyKeys=${resourceSpawnDebug.emptyKeysCount ?? "-"}`,
+      `requested=${Array.isArray(resourceSpawnDebug.requestedTypes) ? resourceSpawnDebug.requestedTypes.join(",") : "-"}`,
+      `picked=${Array.isArray(resourceSpawnDebug.pickedKeys) ? resourceSpawnDebug.pickedKeys.join(" | ") : "-"}`,
+      `placed=${Array.isArray(resourceSpawnDebug.placedTypes) ? resourceSpawnDebug.placedTypes.join(",") : "-"}`,
+      `placedCount=${resourceSpawnDebug.placedCount ?? "-"}`,
+      `reason=${resourceSpawnDebug.failedReason ?? "-"}`
+    );
+  }
   const logLines = debugLogEntries.length ? debugLogEntries : ["[log] pending..."];
   debugOverlayText.value = `${lines.join("\n")}\n\n=== LOG ===\n${logLines.join("\n")}`;
   debugOverlayText.scrollTop = debugOverlayText.scrollHeight;

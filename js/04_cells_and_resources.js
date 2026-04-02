@@ -208,6 +208,15 @@ const RESOURCE_ICONS = {
   army: { file: "army.png", alt: "Войска" },
   resources: { file: "resources.png", alt: "Ресурсы" }
 };
+let resourceSpawnDebug = {
+  turn: 0,
+  emptyKeysCount: 0,
+  requestedTypes: [],
+  pickedKeys: [],
+  placedTypes: [],
+  placedCount: 0,
+  failedReason: "not-run"
+};
 const resourceByPos = {};
 const specialByPos = {};
 const trapStunFields = [];
@@ -934,18 +943,37 @@ function spawnResources() {
       emptyKeys.push(key);
     }
   }
-  if (emptyKeys.length === 0) return;
+  resourceSpawnDebug = {
+    turn: typeof turnCounter !== "undefined" ? turnCounter : 0,
+    emptyKeysCount: emptyKeys.length,
+    requestedTypes: [],
+    pickedKeys: [],
+    placedTypes: [],
+    placedCount: 0,
+    failedReason: emptyKeys.length === 0 ? "no-empty-keys" : "pending"
+  };
+  if (emptyKeys.length === 0) {
+    if (typeof updateDebugOverlay === "function") updateDebugOverlay();
+    return;
+  }
   const goldType = resourceTypes.find(type => type.key === "gold");
   const armyType = resourceTypes.find(type => type.key === "army");
   const resType = resourceTypes.find(type => type.key === "resources");
   const typesToSpawn = [goldType, resType, armyType].filter(Boolean);
+  resourceSpawnDebug.requestedTypes = typesToSpawn.map(type => type.key);
   const pickedResourceKeys = pickResourceSpawnKeys(emptyKeys, typesToSpawn.length, RESOURCE_MIN_DISTANCE);
+  resourceSpawnDebug.pickedKeys = pickedResourceKeys.slice();
+  if (pickedResourceKeys.length < typesToSpawn.length) {
+    resourceSpawnDebug.failedReason = `base-pick-failed:${pickedResourceKeys.length}/${typesToSpawn.length}`;
+  }
   if (pickedResourceKeys.length >= typesToSpawn.length && armyType && Math.random() < 0.2) {
     const remainingKeys = emptyKeys.filter(key => !pickedResourceKeys.includes(key));
     const extraArmyKey = pickSingleResourceKey(remainingKeys, pickedResourceKeys, RESOURCE_MIN_DISTANCE);
     if (extraArmyKey) {
       pickedResourceKeys.push(extraArmyKey);
       typesToSpawn.push(armyType);
+      resourceSpawnDebug.requestedTypes = typesToSpawn.map(type => type.key);
+      resourceSpawnDebug.pickedKeys = pickedResourceKeys.slice();
     }
   }
   for (let index = 0; index < pickedResourceKeys.length; index++) {
@@ -968,9 +996,22 @@ function spawnResources() {
       cell.textContent = type.label;
     }
     resourceByPos[key] = {type, x, y, key};
+    resourceSpawnDebug.placedTypes.push(type.key);
+  }
+  resourceSpawnDebug.placedCount = resourceSpawnDebug.placedTypes.length;
+  if (resourceSpawnDebug.placedCount > 0) {
+    resourceSpawnDebug.failedReason = "ok";
+  } else if (resourceSpawnDebug.failedReason === "pending") {
+    resourceSpawnDebug.failedReason = "no-placements";
   }
   turnsUntilResources = RESOURCE_INTERVAL;
   updateStatusPanel();
+  if (typeof pushDebugLog === "function") {
+    pushDebugLog(
+      `resourceSpawn:turn=${resourceSpawnDebug.turn} empty=${resourceSpawnDebug.emptyKeysCount} requested=${resourceSpawnDebug.requestedTypes.join(",") || "-"} picked=${resourceSpawnDebug.pickedKeys.join("|") || "-"} placed=${resourceSpawnDebug.placedTypes.join(",") || "-"} reason=${resourceSpawnDebug.failedReason}`
+    );
+  }
+  if (typeof updateDebugOverlay === "function") updateDebugOverlay();
 }
 function updateStatusPanel() {
   const resourceValue = Math.max(0, turnsUntilResources);
