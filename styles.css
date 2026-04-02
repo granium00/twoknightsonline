@@ -1,6 +1,7 @@
     :root {
       --cell-size: 44px;
       --cell-font: 11px;
+      --panel-scale: 1;
     }
     body {
       margin: 0;
@@ -453,11 +454,13 @@
     }
 
 .player-panel {
-      padding: clamp(10px, 0.9vw, 14px) clamp(10px, 1vw, 16px);
+      padding:
+        calc(clamp(10px, 0.9vw, 14px) * var(--panel-scale))
+        calc(clamp(10px, 1vw, 16px) * var(--panel-scale));
       background: #132030;
       border: 1px solid #2a3b55;
       border-radius: 6px;
-      font-size: clamp(0.8rem, 0.8vw, 0.95rem);
+      font-size: calc(clamp(0.8rem, 0.8vw, 0.95rem) * var(--panel-scale));
     }
     .player-panel.active {
       border-color: #a5b4c6;
@@ -465,41 +468,43 @@
     }
     .player-name {
       font-weight: bold;
-      margin: 0 0 10px 0;
+      margin: 0 0 calc(10px * var(--panel-scale)) 0;
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: calc(8px * var(--panel-scale));
     }
     .player-color {
-      width: 14px;
-      height: 14px;
+      width: calc(14px * var(--panel-scale));
+      height: calc(14px * var(--panel-scale));
       border-radius: 50%;
       border: 1px solid #1f2b3a;
     }
 .info-card {
-      margin-top: 12px;
-      padding: clamp(8px, 0.8vw, 10px) clamp(8px, 0.9vw, 12px);
+      margin-top: calc(12px * var(--panel-scale));
+      padding:
+        calc(clamp(8px, 0.8vw, 10px) * var(--panel-scale))
+        calc(clamp(8px, 0.9vw, 12px) * var(--panel-scale));
       background: #111b2d;
       border: 1px solid #1f2b3a;
       border-radius: 8px;
-      font-size: clamp(0.72rem, 0.72vw, 0.8rem);
+      font-size: calc(clamp(0.72rem, 0.72vw, 0.8rem) * var(--panel-scale));
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: calc(6px * var(--panel-scale));
     }
     .info-card .info-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      gap: 8px;
+      gap: calc(8px * var(--panel-scale));
     }
 .info-card strong {
-      font-size: clamp(1rem, 1.1vw, 1.3rem);
+      font-size: calc(clamp(1rem, 1.1vw, 1.3rem) * var(--panel-scale));
       color: #ffd166;
       letter-spacing: 0.02em;
     }
     .income-badge {
-      font-size: 0.75rem;
+      font-size: calc(0.75rem * var(--panel-scale));
       color: #8ecae6;
     }
     .resource-list {
@@ -508,22 +513,22 @@
       list-style: none;
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: calc(6px * var(--panel-scale));
       color: #cbd5e1;
     }
     .resource-list li {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 12px;
+      gap: calc(12px * var(--panel-scale));
     }
     .resource-list .stat-section {
-      margin-top: 6px;
-      padding: 4px 8px;
+      margin-top: calc(6px * var(--panel-scale));
+      padding: calc(4px * var(--panel-scale)) calc(8px * var(--panel-scale));
       background: rgba(15, 23, 42, 0.75);
       border: 1px dashed #2a3b55;
       border-radius: 6px;
-      font-size: 0.75rem;
+      font-size: calc(0.75rem * var(--panel-scale));
       font-weight: 700;
       letter-spacing: 0.08em;
       text-transform: uppercase;
@@ -534,86 +539,87 @@
       background: rgba(36, 52, 71, 0.55);
       border: 1px solid #223148;
       border-radius: 8px;
-      padding: 4px 6px;
+      padding: calc(4px * var(--panel-scale)) calc(6px * var(--panel-scale));
     }
     .stat-label-group,
     .stat-value-group {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: calc(6px * var(--panel-scale));
     }
     .stat-label-group span {
-      font-size: 1.4rem;
+      font-size: calc(1.4rem * var(--panel-scale));
     }
     .stat-value {
       font-weight: 600;
       color: #f8fafc;
-      font-size: 1.4rem;
+      font-size: calc(1.4rem * var(--panel-scale));
     }
     .stat-icon {
-      width: 22px;
-      height: 22px;
+      width: calc(22px * var(--panel-scale));
+      height: calc(22px * var(--panel-scale));
       object-fit: contain;
     }
     .inventory-panel {
-      padding: 10px 12px;
+      padding: calc(10px * var(--panel-scale)) calc(12px * var(--panel-scale));
       background: #111b2d;
       border: 1px solid #1f2b3a;
       border-radius: 8px;
-      font-size: 0.85rem;
+      font-size: calc(0.85rem * var(--panel-scale));
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: calc(6px * var(--panel-scale));
     }
     .inventory-title {
       font-weight: 700;
       letter-spacing: 0.08em;
-      font-size: 0.75rem;
+      font-size: calc(0.75rem * var(--panel-scale));
       color: #cbd5e1;
       text-transform: uppercase;
     }
     .inventory-items {
       display: flex;
       flex-wrap: wrap;
-      gap: 6px;
+      gap: calc(6px * var(--panel-scale));
     }
     .inventory-item {
       display: flex;
       align-items: center;
-      gap: 6px;
-      padding: 4px 6px;
+      gap: calc(6px * var(--panel-scale));
+      padding: calc(4px * var(--panel-scale)) calc(6px * var(--panel-scale));
       background: rgba(36, 52, 71, 0.7);
       border: 1px solid #2a3b55;
       border-radius: 6px;
-      font-size: 0.8rem;
+      font-size: calc(0.8rem * var(--panel-scale));
       color: #e2e8f0;
     }
     .inventory-use {
-      margin-left: 6px;
-      padding: 2px 6px;
+      margin-left: calc(6px * var(--panel-scale));
+      padding: calc(2px * var(--panel-scale)) calc(6px * var(--panel-scale));
       background: #2a3b55;
       border: 1px solid #1f2b3a;
       color: #e2e8f0;
       border-radius: 4px;
-      font-size: 0.7rem;
+      font-size: calc(0.7rem * var(--panel-scale));
       cursor: pointer;
       white-space: nowrap;
     }
     .inventory-icon {
-      width: 16px;
-      height: 16px;
+      width: calc(16px * var(--panel-scale));
+      height: calc(16px * var(--panel-scale));
       object-fit: contain;
     }
     #controls {
       width: 100%;
-      max-width: 240px;
-      padding: 10px 12px;
+      max-width: calc(240px * var(--panel-scale));
+      padding: calc(10px * var(--panel-scale)) calc(12px * var(--panel-scale));
       background: #132030;
       border: 1px solid #2a3b55;
       border-radius: 6px;
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: calc(6px * var(--panel-scale));
+      font-size: calc(0.95rem * var(--panel-scale));
     }
 #hudDock {
       position: fixed;
@@ -1556,16 +1562,16 @@
       display: flex;
       align-items: flex-start;
       justify-content: center;
-      gap: 32px;
+      gap: calc(16px + 16px * var(--panel-scale));
       flex-wrap: nowrap;
       overflow-x: auto;
     }
 .player-slot {
-      flex: 0 0 clamp(210px, 18vw, 270px);
-      max-width: clamp(210px, 18vw, 270px);
+      flex: 0 0 calc(clamp(210px, 18vw, 270px) * var(--panel-scale));
+      max-width: calc(clamp(210px, 18vw, 270px) * var(--panel-scale));
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: calc(12px * var(--panel-scale));
       align-items: stretch;
     }
   
