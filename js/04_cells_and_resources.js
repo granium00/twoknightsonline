@@ -920,6 +920,13 @@ function pickResourceSpawnKeys(emptyKeys, requiredCount, minDistance) {
   return search(0, []);
 }
 
+function pickSingleResourceKey(emptyKeys, existingKeys, minDistance) {
+  const shuffledKeys = emptyKeys.slice().sort(() => Math.random() - 0.5);
+  return shuffledKeys.find(candidateKey =>
+    existingKeys.every(existingKey => getManhattanDistance(existingKey, candidateKey) >= minDistance)
+  ) || null;
+}
+
 function spawnResources() {
   clearAllResources();
   const emptyKeys = [];
@@ -939,19 +946,19 @@ function spawnResources() {
     }
   }
   if (emptyKeys.length === 0) return;
-  const typesToSpawn = [];
   const goldType = resourceTypes.find(type => type.key === "gold");
   const armyType = resourceTypes.find(type => type.key === "army");
   const resType = resourceTypes.find(type => type.key === "resources");
-  if (goldType) typesToSpawn.push(goldType);
-  if (resType) typesToSpawn.push(resType);
-  if (armyType) {
-    typesToSpawn.push(armyType);
-    if (Math.random() < 0.2) {
+  const typesToSpawn = [goldType, resType, armyType].filter(Boolean);
+  const pickedResourceKeys = pickResourceSpawnKeys(emptyKeys, typesToSpawn.length, RESOURCE_MIN_DISTANCE);
+  if (pickedResourceKeys.length >= typesToSpawn.length && armyType && Math.random() < 0.2) {
+    const remainingKeys = emptyKeys.filter(key => !pickedResourceKeys.includes(key));
+    const extraArmyKey = pickSingleResourceKey(remainingKeys, pickedResourceKeys, RESOURCE_MIN_DISTANCE);
+    if (extraArmyKey) {
+      pickedResourceKeys.push(extraArmyKey);
       typesToSpawn.push(armyType);
     }
   }
-  const pickedResourceKeys = pickResourceSpawnKeys(emptyKeys, typesToSpawn.length, RESOURCE_MIN_DISTANCE);
   for (let index = 0; index < pickedResourceKeys.length; index++) {
     const key = pickedResourceKeys[index];
     const type = typesToSpawn[index];
