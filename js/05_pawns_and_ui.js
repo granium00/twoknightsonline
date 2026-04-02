@@ -3637,13 +3637,18 @@ function resolveTrollBattle(playerIndex, trollArmy) {
   }
   const playerWon = winnerIndex === playerIndex;
   if (playerWon) {
+    const hadTrollClub = (player.trollClubCount || 0) > 0;
     player.trollClubCount = (player.trollClubCount || 0) + 1;
     const gotToken = Math.random() < 0.5;
     if (gotToken) {
       player.tokenCount = (player.tokenCount || 0) + 1;
     }
-    player.attack += 8;
-    showPickupToast("Вы получили Дубинку троллей: +8 атаки.");
+    if (!hadTrollClub) {
+      player.attack += 8;
+      showPickupToast("Вы получили Дубинку троллей: +8 атаки.");
+    } else {
+      showPickupToast("Вы получили Дубинку троллей.");
+    }
     if (gotToken) {
       showPickupToast("Вы получили Жетон.");
     }
