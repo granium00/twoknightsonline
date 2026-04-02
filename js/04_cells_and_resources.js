@@ -197,7 +197,7 @@ importantNodes.forEach(node => {
 });
 
 const RESOURCE_INTERVAL = 6;
-const RESOURCE_MIN_DISTANCE = 15;
+const RESOURCE_MIN_DISTANCE = 9;
 const resourceTypes = [
   {key: "gold", label: "З", min: 200, max: 400},
   {key: "army", label: "В", min: 5, max: 8},
