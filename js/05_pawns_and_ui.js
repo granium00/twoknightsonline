@@ -4735,34 +4735,13 @@ if (newGameBtn) {
     resetGameState();
   });
 }
-
-function setSidePanelScale(scale) {
-  const safeScale = Math.max(0.42, Math.min(1, scale || 1));
-  document.documentElement.style.setProperty("--panel-scale", safeScale.toFixed(3));
-  return safeScale;
-}
-
 function relayout() {
-  setSidePanelScale(1);
-  const bodyPadding = parseFloat(window.getComputedStyle(document.body).paddingLeft) || 16;
+  const bodyPadding = 16;
+  const gap = 32;
   const viewportW = window.innerWidth;
   const viewportH = window.innerHeight;
-  const summaryHeight = summaryBar ? summaryBar.getBoundingClientRect().height : 0;
-  const availableH = Math.max(0, viewportH - bodyPadding * 2 - summaryHeight - 64);
-  const leftNaturalHeight = playerSlotLeft?.scrollHeight || playerSlotLeft?.offsetHeight || 0;
-  const rightNaturalHeight = playerSlotRight?.scrollHeight || playerSlotRight?.offsetHeight || 0;
-  const naturalMaxHeight = Math.max(leftNaturalHeight, rightNaturalHeight, 1);
-  const targetPanelHeightRatio =
-    viewportW <= 600 ? 0.42 :
-    (viewportW <= 900 || viewportH <= 820) ? 0.5 :
-    (viewportW <= 1366 || viewportH <= 980) ? 0.62 :
-    1;
-  const targetPanelHeight = Math.min(naturalMaxHeight, availableH * targetPanelHeightRatio);
-  const panelScale = setSidePanelScale(targetPanelHeight / naturalMaxHeight);
-  const gameRowStyle = window.getComputedStyle(document.getElementById("gameRow"));
-  const gap = parseFloat(gameRowStyle.columnGap || gameRowStyle.gap) || 32;
-  const leftWidth = playerSlotLeft?.offsetWidth || Math.round(260 * panelScale);
-  const rightWidth = playerSlotRight?.offsetWidth || Math.round(260 * panelScale);
+  const leftWidth = playerSlotLeft?.offsetWidth || 260;
+  const rightWidth = playerSlotRight?.offsetWidth || 260;
   let controlsBeside = true;
   if (playerSlotLeft && playerSlotRight) {
     const leftRect = playerSlotLeft.getBoundingClientRect();
@@ -4772,10 +4751,11 @@ function relayout() {
   const controlsWidth = controlsBeside ? leftWidth + rightWidth : leftWidth;
   const gapCount = controlsBeside ? 2 : 1;
   const availableW = Math.max(0, viewportW - bodyPadding * 2 - controlsWidth - gap * gapCount);
-  const boardAvailableH = Math.max(0, viewportH - bodyPadding * 2 - summaryHeight - gap * 2);
+  const summaryHeight = summaryBar ? summaryBar.getBoundingClientRect().height : 0;
+  const availableH = Math.max(0, viewportH - bodyPadding * 2 - summaryHeight - gap * 2);
 
   const sizeByWidth = availableW > 0 ? availableW / COLS : MIN_CELL;
-  const sizeByHeight = boardAvailableH > 0 ? boardAvailableH / ROWS : MIN_CELL;
+  const sizeByHeight = availableH > 0 ? availableH / ROWS : MIN_CELL;
   const nextSize = Math.floor(Math.min(sizeByWidth, sizeByHeight, MAX_CELL));
   const clamped = Math.max(MIN_CELL, nextSize);
 
