@@ -261,9 +261,10 @@ let turnsUntilTreasure = TREASURE_INTERVAL;
 let treasure = null;
 let treasureTurnsRemaining = 0;
 const FLOWER_SPAWN_MIN_TURN = 1;
-const FLOWER_SPAWN_MAX_TURN = 150;
-const FLOWER_SPAWN_COUNT = 5;
-const FLOWER_DURATION = 4;
+const FLOWER_SPAWN_MAX_TURN = 250;
+const FLOWER_SPAWN_COUNT = 6;
+const FLOWER_MIN_DURATION = 5;
+const FLOWER_MAX_DURATION = 8;
 const FLOWER_ICON = { file: "mystic_flower.png", alt: "Таинственный цветок" };
 const flowerSpawnTurns = [];
 let flowerSpawnIndex = 0;
@@ -292,10 +293,11 @@ const PORTAL_MIN_DISTANCE = 18;
 const PORTAL_LABEL = "";
 const PORTAL_ICON = { file: "portal.png", alt: "Портал" };
 let portalState = null;
-const RAINBOW_SPAWN_MIN_TURN = 20;
-const RAINBOW_SPAWN_MAX_TURN = 200;
-const RAINBOW_SPAWN_COUNT = 5;
-const RAINBOW_DURATION = 6;
+const RAINBOW_SPAWN_MIN_TURN = 1;
+const RAINBOW_SPAWN_MAX_TURN = 270;
+const RAINBOW_SPAWN_COUNT = 6;
+const RAINBOW_MIN_DURATION = 5;
+const RAINBOW_MAX_DURATION = 8;
 const rainbowSpawnTurns = [];
 let rainbowSpawnIndex = 0;
 const rainbowByPos = {};
@@ -1423,7 +1425,7 @@ function spawnFlower() {
   cell.textContent = "";
   setCellIcon(cell, FLOWER_ICON.file, FLOWER_ICON.alt);
   flowerArtifact = { key, x, y, elem: cell };
-  flowerTurnsRemaining = FLOWER_DURATION;
+  flowerTurnsRemaining = randomIntRange(FLOWER_MIN_DURATION, FLOWER_MAX_DURATION);
   return true;
 }
 
@@ -1497,7 +1499,12 @@ function spawnRainbowStone() {
   cell.classList.add("rainbow-stone", "important");
   cell.textContent = "";
   setCellIcon(cell, "rainbow_stone.png", "Радужный камень");
-  rainbowByPos[key] = { key, x, y, turnsRemaining: RAINBOW_DURATION };
+  rainbowByPos[key] = {
+    key,
+    x,
+    y,
+    turnsRemaining: randomIntRange(RAINBOW_MIN_DURATION, RAINBOW_MAX_DURATION)
+  };
   return true;
 }
 
