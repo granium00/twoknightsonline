@@ -895,29 +895,18 @@ function getManhattanDistance(keyA, keyB) {
 
 function pickResourceSpawnKeys(emptyKeys, requiredCount, minDistance) {
   const shuffledKeys = emptyKeys.slice().sort(() => Math.random() - 0.5);
-
-  function search(startIndex, pickedKeys) {
+  const pickedKeys = [];
+  for (const candidateKey of shuffledKeys) {
+    const fits = pickedKeys.every(existingKey =>
+      getManhattanDistance(existingKey, candidateKey) >= minDistance
+    );
+    if (!fits) continue;
+    pickedKeys.push(candidateKey);
     if (pickedKeys.length >= requiredCount) {
-      return pickedKeys.slice();
+      return pickedKeys;
     }
-    const remainingNeeded = requiredCount - pickedKeys.length;
-    for (let index = startIndex; index <= shuffledKeys.length - remainingNeeded; index++) {
-      const candidateKey = shuffledKeys[index];
-      const fits = pickedKeys.every(existingKey =>
-        getManhattanDistance(existingKey, candidateKey) >= minDistance
-      );
-      if (!fits) continue;
-      pickedKeys.push(candidateKey);
-      const result = search(index + 1, pickedKeys);
-      if (result.length >= requiredCount) {
-        return result;
-      }
-      pickedKeys.pop();
-    }
-    return [];
   }
-
-  return search(0, []);
+  return pickedKeys;
 }
 
 function pickSingleResourceKey(emptyKeys, existingKeys, minDistance) {
