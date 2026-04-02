@@ -466,8 +466,20 @@ function renderUnderworldView(playerIndex) {
   }
 }
 
+function clearRenderedWormholes() {
+  Object.values(grid).forEach(cell => {
+    if (!cell || !cell.classList.contains("wormhole")) return;
+    cell.classList.remove("wormhole", "special", "important");
+    clearCellIcon(cell);
+    if (!cell.classList.contains("inactive") && !nodeByPos[cell.dataset.key || ""]) {
+      cell.classList.add("inactive");
+    }
+  });
+}
+
 function refreshVisibleWorld() {
   if (!game) return;
+  clearRenderedWormholes();
   const viewerIndex = getViewerWorldPlayerIndex();
   const visibleLayer = getVisibleWorldLayer();
   if (visibleLayer === WORLD_LAYER_UNDER && players[viewerIndex]?.layer === WORLD_LAYER_UNDER) {
@@ -491,6 +503,9 @@ function enterUnderworld(playerIndex) {
   player.layer = WORLD_LAYER_UNDER;
   player.underworldState = createUnderworldStateForPlayer(playerIndex);
   refreshVisibleWorld();
+  if (typeof emitStateNow === "function") {
+    emitStateNow(true);
+  }
   showPrivatePickupToastForPlayer(playerIndex, "Червоточина утащила вас на нижний уровень.");
   return true;
 }
@@ -501,6 +516,9 @@ function exitUnderworld(playerIndex) {
   player.layer = WORLD_LAYER_UPPER;
   player.underworldState = null;
   refreshVisibleWorld();
+  if (typeof emitStateNow === "function") {
+    emitStateNow(true);
+  }
   showPrivatePickupToastForPlayer(playerIndex, "Вы поднялись по лестнице.");
   return true;
 }
