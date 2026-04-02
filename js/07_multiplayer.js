@@ -247,6 +247,8 @@ function buildState() {
       trollClubCount: p.trollClubCount,
       flowerCount: p.flowerCount,
       tokenCount: p.tokenCount,
+      ballistaCount: p.ballistaCount,
+      boltCount: p.boltCount,
       bootsCount: p.bootsCount,
       ringCount: p.ringCount,
       terrorRingCount: p.terrorRingCount,
