@@ -3557,13 +3557,19 @@ function refreshCastleModal(key, playerIndex) {
         castleWithdrawBtn.disabled = storage <= 0;
       }
       if (castleWithdrawInput) {
-        castleWithdrawInput.value = "0";
+        const isEditingWithdraw = document.activeElement === castleWithdrawInput;
+        if (!isEditingWithdraw) {
+          castleWithdrawInput.value = "0";
+        }
         castleWithdrawInput.max = storage;
       }
     }
     if (castleDepositInput && castleDepositBtn) {
       const pocketArmy = player ? player.pocket.army : 0;
-      castleDepositInput.value = "0";
+      const isEditingDeposit = document.activeElement === castleDepositInput;
+      if (!isEditingDeposit) {
+        castleDepositInput.value = "0";
+      }
       castleDepositInput.max = pocketArmy;
       castleDepositBtn.disabled = pocketArmy <= 0;
     }
