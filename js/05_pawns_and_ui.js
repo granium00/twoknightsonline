@@ -1388,12 +1388,14 @@ function flashPrice(btn, amountText, iconSrc, iconAlt) {
   ) {
     const selector = getFlashPriceSelector(btn);
     if (selector) {
-      emitPrivateUiToPlayer(privatePlayerIndex, "flashPrice", {
-        selector,
-        amountText,
-        iconSrc,
-        iconAlt
-      });
+      setTimeout(() => {
+        emitPrivateUiToPlayer(privatePlayerIndex, "flashPrice", {
+          selector,
+          amountText,
+          iconSrc,
+          iconAlt
+        });
+      }, 0);
       return;
     }
   }
@@ -1559,18 +1561,12 @@ function syncLavkaModalState(playerIndex) {
   const player = players[playerIndex];
   if (!player) return;
   const gold = getTotalGold(player);
-  const cost50 = getDiscountedGoldCost(player, 800);
-  const cost100 = getDiscountedGoldCost(player, 1200);
   const costPotion = getDiscountedGoldCost(player, 250);
   lavkaButtons.forEach(btn => {
     const type = btn.getAttribute("data-lavka-buy");
-    if (type === "res-50") btn.disabled = gold < cost50;
-    if (type === "res-100") btn.disabled = gold < cost100;
     if (type === "res-1000-infl") btn.disabled = getTotalResources(player) < 1000;
     if (type === "potion-invis") btn.disabled = gold < costPotion;
     if (type === "potion-luck") btn.disabled = gold < costPotion;
-    if (type === "res-50") setTradePrice(btn, goldPriceHtml(cost50));
-    if (type === "res-100") setTradePrice(btn, goldPriceHtml(cost100));
     if (type === "potion-invis") setTradePrice(btn, goldPriceHtml(costPotion));
     if (type === "potion-luck") setTradePrice(btn, goldPriceHtml(costPotion));
   });
@@ -1609,22 +1605,6 @@ lavkaButtons.forEach(btn => {
     if (lavkaPlayerIndex === null) return;
     const player = players[lavkaPlayerIndex];
     const type = btn.getAttribute("data-lavka-buy");
-    if (type === "res-50") {
-      const cost = getDiscountedGoldCost(player, 800);
-      if (getTotalGold(player) < cost) return;
-      spendGold(player, cost);
-      player.resources.resources += 50;
-      showPickupToast("+50 ресурсов");
-      flashPrice(btn, cost, "assets/icons/icon-gold.png", "Золото");
-    }
-    if (type === "res-100") {
-      const cost = getDiscountedGoldCost(player, 1200);
-      if (getTotalGold(player) < cost) return;
-      spendGold(player, cost);
-      player.resources.resources += 100;
-      showPickupToast("+100 ресурсов");
-      flashPrice(btn, cost, "assets/icons/icon-gold.png", "Золото");
-    }
     if (type === "res-1000-infl") {
       if (getTotalResources(player) < 1000) return;
       spendResources(player, 1000);
