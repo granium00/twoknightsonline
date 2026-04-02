@@ -795,6 +795,24 @@ function showPrivatePickupToastForPlayer(playerIndex, text) {
   });
 }
 
+function shouldKeepPickupToastPrivate(playerIndex) {
+  const actor = players[playerIndex];
+  if (!actor) return false;
+  return players.some((player, index) => {
+    if (index === playerIndex || !player) return false;
+    return (player.layer || WORLD_LAYER_UPPER) !== (actor.layer || WORLD_LAYER_UPPER);
+  });
+}
+
+function showLayerAwarePickupToast(playerIndex, text) {
+  if (!text) return;
+  if (shouldKeepPickupToastPrivate(playerIndex)) {
+    showPrivatePickupToastForPlayer(playerIndex, text);
+    return;
+  }
+  showPickupToast(text, { actorPlayerIndex: playerIndex });
+}
+
 function updateInventory(playerIndex) {
   const panel = inventoryPanels[playerIndex];
   const player = players[playerIndex];
@@ -5044,7 +5062,7 @@ function finalizeMove(gridX, gridY) {
   if (rainbowByPos[key]) {
     currentPlayer.rainbowStoneCount = (currentPlayer.rainbowStoneCount || 0) + 1;
     updatePlayerResources(currentPlayerIndex);
-    showPickupToast("Радужный камень добавлен в инвентарь.");
+    showLayerAwarePickupToast(currentPlayerIndex, "Радужный камень добавлен в инвентарь.");
     clearRainbowStone(key);
   }
   if (masterActive && key === MASTER_CELL.key) {
@@ -5066,26 +5084,26 @@ function finalizeMove(gridX, gridY) {
     delete resourceByPos[key];
     setCellToInactive(x, y);
     const label = type.key === "gold" ? "золота" : type.key === "army" ? "войск" : "ресурсов";
-    showPickupToast(`В карман: +${amount} ${label}`);
+    showLayerAwarePickupToast(currentPlayerIndex, `В карман: +${amount} ${label}`);
   }
 
   if (treasure && treasure.key === key) {
     const goldReward = Math.floor(Math.random() * (1200 - 700 + 1)) + 700;
     currentPlayer.pocket.gold += goldReward;
     updatePlayerResources(currentPlayerIndex);
-    showPickupToast(`Сокровище: +${goldReward} золота в карман`);
+    showLayerAwarePickupToast(currentPlayerIndex, `Сокровище: +${goldReward} золота в карман`);
     clearTreasure();
   }
   if (flowerArtifact && flowerArtifact.key === key) {
     currentPlayer.flowerCount = (currentPlayer.flowerCount || 0) + 1;
     updatePlayerResources(currentPlayerIndex);
-    showPickupToast("Таинственный цветок добавлен в инвентарь.");
+    showLayerAwarePickupToast(currentPlayerIndex, "Таинственный цветок добавлен в инвентарь.");
     clearFlower();
   }
   if (cloverArtifact && cloverArtifact.key === key) {
     currentPlayer.cloverCount = (currentPlayer.cloverCount || 0) + 1;
     updatePlayerResources(currentPlayerIndex);
-    showPickupToast("Клевер добавлен в инвентарь.");
+    showLayerAwarePickupToast(currentPlayerIndex, "Клевер добавлен в инвентарь.");
     if (typeof clearClover === "function") {
       clearClover();
     }
