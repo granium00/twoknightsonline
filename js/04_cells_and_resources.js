@@ -198,6 +198,7 @@ importantNodes.forEach(node => {
 
 const RESOURCE_INTERVAL = 6;
 const RESOURCE_MIN_DISTANCE = 15;
+const RESOURCE_FALLBACK_MIN_DISTANCE = 1;
 const resourceTypes = [
   {key: "gold", label: "З", min: 200, max: 400},
   {key: "army", label: "В", min: 5, max: 8},
@@ -893,14 +894,14 @@ function getManhattanDistance(keyA, keyB) {
   return Math.abs(x1 - x2) + Math.abs(y1 - y2);
 }
 
-function pickResourceSpawnKeys(emptyKeys, requiredCount) {
+function pickResourceSpawnKeys(emptyKeys, requiredCount, minDistance) {
   let bestKeys = [];
   for (let attempt = 0; attempt < 200; attempt++) {
     const shuffledKeys = emptyKeys.slice().sort(() => Math.random() - 0.5);
     const pickedKeys = [];
     for (const candidateKey of shuffledKeys) {
       const farEnough = pickedKeys.every(existingKey =>
-        getManhattanDistance(existingKey, candidateKey) >= RESOURCE_MIN_DISTANCE
+        getManhattanDistance(existingKey, candidateKey) >= minDistance
       );
       if (!farEnough) continue;
       pickedKeys.push(candidateKey);
@@ -946,7 +947,13 @@ function spawnResources() {
       typesToSpawn.push(armyType);
     }
   }
-  const pickedResourceKeys = pickResourceSpawnKeys(emptyKeys, typesToSpawn.length);
+  let pickedResourceKeys = [];
+  for (let distance = RESOURCE_MIN_DISTANCE; distance >= RESOURCE_FALLBACK_MIN_DISTANCE; distance--) {
+    pickedResourceKeys = pickResourceSpawnKeys(emptyKeys, typesToSpawn.length, distance);
+    if (pickedResourceKeys.length >= typesToSpawn.length) {
+      break;
+    }
+  }
   for (let index = 0; index < pickedResourceKeys.length; index++) {
     const key = pickedResourceKeys[index];
     const type = typesToSpawn[index];
