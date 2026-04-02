@@ -1354,8 +1354,49 @@ function goldPriceHtml(cost) {
   return `<img class="price-icon" src="assets/icons/icon-gold.png" alt="Золото" />Цена: ${cost} золота`;
 }
 
+function getFlashPriceSelector(btn) {
+  if (!btn) return null;
+  if (btn.id) return `#${btn.id}`;
+
+  const dataKeys = [
+    "buy",
+    "lavkaBuy",
+    "workshopBuy",
+    "hire",
+    "cityReward",
+    "cityExchange",
+    "castleFeature"
+  ];
+  for (const key of dataKeys) {
+    const value = btn.dataset?.[key];
+    if (!value) continue;
+    const attr = key.replace(/[A-Z]/g, m => `-${m.toLowerCase()}`);
+    return `[data-${attr}="${value}"]`;
+  }
+  return null;
+}
+
 function flashPrice(btn, amountText, iconSrc, iconAlt) {
   if (!btn) return;
+  const privatePlayerIndex =
+    typeof currentPrivateUiPlayerIndex === "number" ? currentPrivateUiPlayerIndex : null;
+  if (
+    privatePlayerIndex !== null &&
+    typeof shouldDelegatePrivateUiToPlayer === "function" &&
+    shouldDelegatePrivateUiToPlayer(privatePlayerIndex) &&
+    typeof emitPrivateUiToPlayer === "function"
+  ) {
+    const selector = getFlashPriceSelector(btn);
+    if (selector) {
+      emitPrivateUiToPlayer(privatePlayerIndex, "flashPrice", {
+        selector,
+        amountText,
+        iconSrc,
+        iconAlt
+      });
+      return;
+    }
+  }
   const flash = document.createElement("span");
   flash.className = "price-flash";
   flash.innerHTML =
@@ -1419,7 +1460,7 @@ function grantPurchasedArmy(playerIndex, amount) {
   const player = players[playerIndex];
   if (player) {
     player.pocket.army += amount;
-    showPickupToast(`В карман: +${amount} войск`);
+    showPrivatePickupToastForPlayer(playerIndex, `В карман: +${amount} войск`);
   }
   return "pocket";
 }

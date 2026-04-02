@@ -1299,6 +1299,26 @@ if (socket) {
     if (!type) return;
     pushDebugLog(`privateUiRecv:${type}`);
     markNetworkEvent(`privateUiRecv:${type}`);
+    if (type === "flashPrice" && typeof flashPrice === "function") {
+      const selector = String(payload.selector || "").trim();
+      if (!selector) return;
+      const scheduleFlash = () => {
+        const btn = document.querySelector(selector);
+        if (!btn) return;
+        flashPrice(
+          btn,
+          payload.amountText,
+          payload.iconSrc,
+          payload.iconAlt
+        );
+      };
+      if (typeof requestAnimationFrame === "function") {
+        requestAnimationFrame(() => requestAnimationFrame(scheduleFlash));
+      } else {
+        setTimeout(scheduleFlash, 0);
+      }
+      return;
+    }
     if (type === "showBattleModal" && typeof showBattleModal === "function") {
       showBattleModal(payload.result, true);
       return;
