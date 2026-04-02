@@ -5073,8 +5073,12 @@ function finalizeMove(gridX, gridY) {
   if (resourceNode) {
     const {type, x, y} = resourceNode;
     let amount = Math.floor(Math.random() * (type.max - type.min + 1)) + type.min;
-    if (turnCounter >= 150) {
-      amount = Math.floor(amount * 1.75);
+    if (type.key !== "army") {
+      if (turnCounter >= 225) {
+        amount = Math.floor(amount * 2.5);
+      } else if (turnCounter >= 150) {
+        amount = Math.floor(amount * 1.75);
+      }
     }
     if (currentPlayer.luckTurnsRemaining > 0) {
       amount = Math.floor(amount * 1.6);
