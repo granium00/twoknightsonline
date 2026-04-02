@@ -3720,7 +3720,7 @@ function depositCastleArmy(amount) {
   updatePlayerResources(castleModalPlayerIndex);
   recalcPlayerResourceIncome(castleModalPlayerIndex);
   refreshCastleModal(castleModalKey, castleModalPlayerIndex);
-  showPickupToast(`Р’ Р·Р°РјРѕРє: +${amount} РІРѕР№СЃРє`);
+  showPickupToast(`В замок: +${amount} войск`);
   return true;
 }
 
@@ -3736,7 +3736,7 @@ function withdrawCastleArmy(amount) {
   player.pocket.army += amount;
   updatePlayerResources(castleModalPlayerIndex);
   refreshCastleModal(castleModalKey, castleModalPlayerIndex);
-  showPickupToast(`Р’ РєР°СЂРјР°РЅ: +${amount} РІРѕР№СЃРє`);
+  showPickupToast(`В карман: +${amount} войск`);
   return true;
 }
 
