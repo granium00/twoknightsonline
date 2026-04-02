@@ -226,6 +226,8 @@ function buildState() {
       color: p.color,
       x: p.x,
       y: p.y,
+      layer: p.layer,
+      underworldState: shallowClone(p.underworldState),
       resources: shallowClone(p.resources),
       pocket: shallowClone(p.pocket),
       income: shallowClone(p.income),
@@ -347,6 +349,9 @@ function buildState() {
     cutthroatIdCounter,
     trapStunFields: shallowClone(trapStunFields),
     trapStunIdCounter,
+    upperWormhole: shallowClone(upperWormhole),
+    wormholeSpawnTurns: shallowClone(wormholeSpawnTurns),
+    wormholeSpawnIndex,
     lastBattleResult: shallowClone(lastBattleResult),
     lastBattleId,
     pendingTurnAdvance,
@@ -624,6 +629,9 @@ function applyState(state) {
   pendingTurnAdvance = state.pendingTurnAdvance ?? pendingTurnAdvance;
   pendingTurnManualOnly = state.pendingTurnManualOnly ?? pendingTurnManualOnly;
   deferredPrivateTurnPlayerIndex = state.deferredPrivateTurnPlayerIndex ?? deferredPrivateTurnPlayerIndex;
+  upperWormhole = state.upperWormhole ?? upperWormhole;
+  wormholeSpawnTurns = Array.isArray(state.wormholeSpawnTurns) ? state.wormholeSpawnTurns.slice() : wormholeSpawnTurns;
+  wormholeSpawnIndex = state.wormholeSpawnIndex ?? wormholeSpawnIndex;
 
   state.players?.forEach((data, idx) => {
     if (!players[idx]) return;
@@ -755,6 +763,9 @@ function applyState(state) {
       typeof openHire === "function" &&
       typeof hirePlayerIndex === "number") {
     openHire(hirePlayerIndex);
+  }
+  if (typeof refreshVisibleWorld === "function") {
+    refreshVisibleWorld();
   }
   updateTurnUI();
   updateStatusPanel();

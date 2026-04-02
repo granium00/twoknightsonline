@@ -9,6 +9,8 @@ const players = [
     color: "#4cc9f0",
     x: startNode.x,
     y: startNode.y,
+    layer: "upper",
+    underworldState: null,
     resources: {gold: 0, army: 0, influence: 0, resources: 0},
     pocket: {gold: 0, army: 0, resources: 0},
     income: {resources: 0},
@@ -47,6 +49,8 @@ const players = [
     color: "#ff595e",
     x: startNode.x,
     y: startNode.y,
+    layer: "upper",
+    underworldState: null,
     resources: {gold: 0, army: 0, influence: 0, resources: 0},
     pocket: {gold: 0, army: 0, resources: 0},
     income: {resources: 0},
@@ -136,6 +140,362 @@ const INVENTORY_ITEMS = [
   {key: "hero-hilt", label: "Рукоять меча героя", icon: "hero_hilt.png", count: player => player.heroHiltCount || 0},
   {key: "sword", label: "Меч героя", icon: "sword.png", count: player => (player.hasSword ? 1 : 0)}
 ];
+
+const WORLD_LAYER_UPPER = "upper";
+const WORLD_LAYER_UNDER = "under";
+const UPPER_WORLD_BG = 'url("assets/map-plateau.jpg")';
+const UNDERWORLD_BG = 'url("assets/backgrounds/underworld_bg.png")';
+const WORMHOLE_ICON = { file: "wormhole.png", alt: "Червоточина" };
+const STAIRS_ICON = { file: "stairs.png", alt: "Лестница" };
+const UNDERWORLD_GOLD_COUNT = 5;
+const UNDERWORLD_RESOURCES_COUNT = 3;
+const WORMHOLE_MIN_SPAWNS = 1;
+const WORMHOLE_MAX_SPAWNS = 3;
+const WORMHOLE_MAX_SPAWN_TURN = 250;
+let wormholeSpawnTurns = [];
+let wormholeSpawnIndex = 0;
+let upperWormhole = null;
+
+function initWormholeSpawns() {
+  const picked = new Set();
+  const count = randomIntRange(WORMHOLE_MIN_SPAWNS, WORMHOLE_MAX_SPAWNS);
+  while (picked.size < count) {
+    picked.add(randomIntRange(1, WORMHOLE_MAX_SPAWN_TURN));
+  }
+  wormholeSpawnTurns = Array.from(picked).sort((a, b) => a - b);
+  wormholeSpawnIndex = 0;
+  upperWormhole = null;
+}
+
+function getViewerWorldPlayerIndex() {
+  if (
+    typeof socket !== "undefined" &&
+    socket &&
+    typeof onlineMatchStarted !== "undefined" &&
+    onlineMatchStarted &&
+    typeof localPlayerIndex === "number"
+  ) {
+    return localPlayerIndex;
+  }
+  try {
+    return typeof currentPlayerIndex === "number" ? currentPlayerIndex : 0;
+  } catch (error) {
+    return 0;
+  }
+}
+
+function getVisibleWorldLayer() {
+  const viewerIndex = getViewerWorldPlayerIndex();
+  return players[viewerIndex]?.layer || WORLD_LAYER_UPPER;
+}
+
+function getPlayerUnderworldState(playerIndex) {
+  return players[playerIndex]?.underworldState || null;
+}
+
+function isUpperLevelPositionOccupied(x, y) {
+  return players.some(player => player.layer !== WORLD_LAYER_UNDER && player.x === x && player.y === y);
+}
+
+function getUpperWormholeEligibleKeys() {
+  const keys = [];
+  for (let y = 0; y < ROWS; y++) {
+    for (let x = 0; x < COLS; x++) {
+      const key = `${x},${y}`;
+      if (blockedCellKeys.has(key)) continue;
+      if (nodeByPos[key]) continue;
+      if (resourceByPos[key]) continue;
+      if (specialByPos[key]) continue;
+      if (stoneByPos[key]) continue;
+      if (rainbowByPos[key]) continue;
+      if (treasure && treasure.key === key) continue;
+      if (flowerArtifact && flowerArtifact.key === key) continue;
+      if (cloverArtifact && cloverArtifact.key === key) continue;
+      if (barbarianCells.some(cell => cell.key === key)) continue;
+      if (isUpperLevelPositionOccupied(x, y)) continue;
+      keys.push(key);
+    }
+  }
+  return keys;
+}
+
+function spawnUpperWormhole() {
+  if (upperWormhole) return true;
+  const eligibleKeys = getUpperWormholeEligibleKeys();
+  if (!eligibleKeys.length) return false;
+  const key = eligibleKeys[Math.floor(Math.random() * eligibleKeys.length)];
+  const [x, y] = key.split(",").map(Number);
+  upperWormhole = { key, x, y };
+  return true;
+}
+
+function handleWormholeSpawns() {
+  if (turnCounter > WORMHOLE_MAX_SPAWN_TURN) return;
+  if (upperWormhole) return;
+  if (wormholeSpawnIndex >= wormholeSpawnTurns.length) return;
+  if (turnCounter < wormholeSpawnTurns[wormholeSpawnIndex]) return;
+  if (spawnUpperWormhole()) {
+    wormholeSpawnIndex += 1;
+  }
+}
+
+function createUnderworldStateForPlayer(playerIndex) {
+  const player = players[playerIndex];
+  if (!player) return null;
+  const reserved = new Set([`${player.x},${player.y}`]);
+  const available = [];
+  for (let y = 0; y < ROWS; y++) {
+    for (let x = 0; x < COLS; x++) {
+      const key = `${x},${y}`;
+      if (reserved.has(key)) continue;
+      available.push(key);
+    }
+  }
+  for (let i = available.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [available[i], available[j]] = [available[j], available[i]];
+  }
+  const resources = {};
+  let cursor = 0;
+  for (let i = 0; i < UNDERWORLD_GOLD_COUNT && cursor < available.length; i += 1, cursor += 1) {
+    const key = available[cursor];
+    const [x, y] = key.split(",").map(Number);
+    resources[key] = { key, x, y, typeKey: "gold" };
+  }
+  for (let i = 0; i < UNDERWORLD_RESOURCES_COUNT && cursor < available.length; i += 1, cursor += 1) {
+    const key = available[cursor];
+    const [x, y] = key.split(",").map(Number);
+    resources[key] = { key, x, y, typeKey: "resources" };
+  }
+  const stairsKey = cursor < available.length ? available[cursor] : `${player.x},${player.y}`;
+  const [stairsX, stairsY] = stairsKey.split(",").map(Number);
+  return {
+    resourcesByPos: resources,
+    stairs: { key: stairsKey, x: stairsX, y: stairsY }
+  };
+}
+
+function resetCellForVisibleRender(key) {
+  const cell = grid[key];
+  if (!cell) return;
+  cell.classList.remove(
+    "resource", "important", "owned", "reachable", "barbarian", "special", "forest",
+    "resource-disabled", "mercenary", "thief", "cutthroat", "mage", "portal", "wormhole",
+    "stairs", "flower", "clover", "stone", "rainbow-stone", "master", "troll", "troll-cave", "treasure"
+  );
+  cell.classList.add("inactive");
+  cell.textContent = "";
+  clearCellIcon(cell);
+  const trollToken = cell.querySelector(".troll-token");
+  if (trollToken) trollToken.remove();
+  cell.style.background = "";
+  cell.style.borderColor = "";
+  cell.style.color = "";
+  cell.removeAttribute("data-barbarian");
+  cell.removeAttribute("title");
+}
+
+function renderStandardResourceCell(entry) {
+  const key = entry.key || `${entry.x},${entry.y}`;
+  const cell = grid[key];
+  if (!cell) return;
+  const typeKey = entry.typeKey || entry.type?.key;
+  const iconDef = RESOURCE_ICONS[typeKey];
+  cell.classList.remove("inactive");
+  cell.classList.add("resource", "important");
+  cell.textContent = "";
+  if (iconDef) {
+    const icon = setCellIcon(cell, iconDef.file, iconDef.alt);
+    if (icon) icon.classList.add("resource-icon");
+  }
+}
+
+function renderUpperSpecialCell(entry) {
+  const cell = grid[entry.key];
+  if (!cell) return;
+  cell.classList.remove("inactive");
+  cell.classList.add("important", "special");
+  if (entry.extraClass) cell.classList.add(entry.extraClass);
+  cell.textContent = entry.label || "";
+  clearCellIcon(cell);
+  if (entry.disabled) {
+    cell.classList.add("resource-disabled");
+  }
+  if (entry.extraClass === "mage") {
+    setCellIcon(cell, "mage.png", "Маг");
+  }
+  if (entry.extraClass === "portal") {
+    cell.textContent = "";
+    setCellIcon(cell, "portal.png", "Портал");
+  }
+  if (entry.extraClass === "troll-cave") {
+    cell.textContent = "";
+    setCellIcon(cell, "troll_cave.png", "Пещера троллей");
+  }
+  if (
+    entry.featureKey &&
+    typeof applySpecialFeatureIcon === "function" &&
+    (entry.featureKey === "lumber" || entry.featureKey === "mine" || entry.featureKey === "clay")
+  ) {
+    applySpecialFeatureIcon(entry.x, entry.y, entry.featureKey);
+  }
+}
+
+function renderUpperWorldView() {
+  Object.keys(grid).forEach(key => {
+    if (nodeByPos[key]) {
+      restoreImportantNodeCell(key, grid[key]);
+    } else {
+      resetCellForVisibleRender(key);
+      if (blockedCellKeys.has(key)) {
+        grid[key].classList.add("blocked");
+      } else {
+        grid[key].classList.remove("blocked");
+      }
+    }
+  });
+  Object.values(resourceByPos).forEach(renderStandardResourceCell);
+  Object.values(specialByPos).forEach(renderUpperSpecialCell);
+  if (upperWormhole) {
+    const cell = grid[upperWormhole.key];
+    if (cell) {
+      cell.classList.remove("inactive");
+      cell.classList.add("important", "special", "wormhole");
+      cell.textContent = "";
+      setCellIcon(cell, WORMHOLE_ICON.file, WORMHOLE_ICON.alt);
+    }
+  }
+  if (treasure?.key) {
+    const cell = grid[treasure.key];
+    if (cell) {
+      cell.classList.remove("inactive");
+      cell.classList.add("treasure", "important");
+      cell.textContent = "";
+      setCellIcon(cell, "treasure.png", "Сокровище");
+    }
+  }
+  if (flowerArtifact?.key) {
+    const cell = grid[flowerArtifact.key];
+    if (cell) {
+      cell.classList.remove("inactive");
+      cell.classList.add("flower", "important");
+      cell.textContent = "";
+      setCellIcon(cell, FLOWER_ICON.file, FLOWER_ICON.alt);
+    }
+  }
+  if (cloverArtifact?.key) {
+    const cell = grid[cloverArtifact.key];
+    if (cell) {
+      cell.classList.remove("inactive");
+      cell.classList.add("clover", "important");
+      cell.textContent = "";
+      setCellIcon(cell, "clover.png", "Клевер");
+    }
+  }
+  Object.values(stoneByPos).forEach(entry => {
+    const cell = grid[entry.key];
+    if (!cell) return;
+    cell.classList.remove("inactive");
+    cell.classList.add("stone", "important");
+    cell.textContent = "";
+    setCellIcon(cell, "stone.png", "Камень");
+  });
+  Object.values(rainbowByPos).forEach(entry => {
+    const cell = grid[entry.key];
+    if (!cell) return;
+    cell.classList.remove("inactive");
+    cell.classList.add("rainbow-stone", "important");
+    cell.textContent = "";
+    setCellIcon(cell, "rainbow_stone.png", "Радужный камень");
+  });
+  if (masterActive) {
+    const cell = grid[MASTER_CELL.key];
+    if (cell) {
+      cell.classList.remove("inactive");
+      cell.classList.add("master", "important");
+      cell.textContent = "";
+      setCellIcon(cell, "grand_master.png", "Великий мастер");
+    }
+  }
+  barbarianCells.forEach(entry => {
+    const cell = grid[entry.key];
+    if (!cell) return;
+    cell.classList.remove("inactive");
+    cell.classList.add("important", "barbarian");
+    cell.textContent = "";
+    cell.title = "ВАРВАРЫ";
+    cell.setAttribute("data-barbarian", "true");
+    setCellIcon(cell, "barbarian_village.png", "Варвары");
+  });
+  mercenaries.forEach(entry => setCellToMercenary(entry.x, entry.y));
+  thieves.forEach(entry => setCellToThief(entry.x, entry.y));
+  cutthroats.forEach(entry => setCellToCutthroat(entry.x, entry.y));
+  if (typeof updateTrollVisual === "function") {
+    trollState.prevKey = null;
+    updateTrollVisual();
+  }
+  if (typeof renderTrapStunFields === "function") {
+    renderTrapStunFields();
+  }
+}
+
+function renderUnderworldView(playerIndex) {
+  Object.keys(grid).forEach(key => {
+    resetCellForVisibleRender(key);
+    grid[key].classList.remove("blocked");
+  });
+  const state = getPlayerUnderworldState(playerIndex);
+  if (!state) return;
+  Object.values(state.resourcesByPos || {}).forEach(renderStandardResourceCell);
+  if (state.stairs?.key) {
+    const cell = grid[state.stairs.key];
+    if (cell) {
+      cell.classList.remove("inactive");
+      cell.classList.add("important", "special", "stairs");
+      cell.textContent = "";
+      setCellIcon(cell, STAIRS_ICON.file, STAIRS_ICON.alt);
+    }
+  }
+}
+
+function refreshVisibleWorld() {
+  if (!game) return;
+  const viewerIndex = getViewerWorldPlayerIndex();
+  const visibleLayer = getVisibleWorldLayer();
+  if (visibleLayer === WORLD_LAYER_UNDER && players[viewerIndex]?.layer === WORLD_LAYER_UNDER) {
+    game.style.backgroundImage = UNDERWORLD_BG;
+    renderUnderworldView(viewerIndex);
+  } else {
+    game.style.backgroundImage = UPPER_WORLD_BG;
+    renderUpperWorldView();
+  }
+  clearReachable();
+  if (movesRemaining > 0) {
+    showReachable();
+  }
+  updatePawns();
+}
+
+function enterUnderworld(playerIndex) {
+  const player = players[playerIndex];
+  if (!player) return false;
+  upperWormhole = null;
+  player.layer = WORLD_LAYER_UNDER;
+  player.underworldState = createUnderworldStateForPlayer(playerIndex);
+  refreshVisibleWorld();
+  showPrivatePickupToastForPlayer(playerIndex, "Червоточина утащила вас на нижний уровень.");
+  return true;
+}
+
+function exitUnderworld(playerIndex) {
+  const player = players[playerIndex];
+  if (!player) return false;
+  player.layer = WORLD_LAYER_UPPER;
+  player.underworldState = null;
+  refreshVisibleWorld();
+  showPrivatePickupToastForPlayer(playerIndex, "Вы поднялись по лестнице.");
+  return true;
+}
 
 function applyPotion(playerIndex, type) {
   const player = players[playerIndex];
@@ -307,6 +667,7 @@ function canSeeEnemyPocket(playerIndex) {
   const viewer = players[viewerIndex];
   const target = players[playerIndex];
   if (!viewer || !target) return false;
+  if ((viewer.layer || WORLD_LAYER_UPPER) !== (target.layer || WORLD_LAYER_UPPER)) return false;
   return getManhattanDistance(viewer.x, viewer.y, target.x, target.y) <= ENEMY_POCKET_VISIBILITY_RANGE;
 }
 
@@ -314,6 +675,8 @@ function canSeeEnemyCastleResources(playerIndex) {
   const viewerIndex = getViewerPlayerIndex();
   if (viewerIndex === null || viewerIndex === playerIndex) return true;
   const viewer = players[viewerIndex];
+  if ((viewer.layer || WORLD_LAYER_UPPER) !== WORLD_LAYER_UPPER) return false;
+  if ((players[playerIndex]?.layer || WORLD_LAYER_UPPER) !== WORLD_LAYER_UPPER) return false;
   const castleKey = getFirstOwnedCastleKey(playerIndex);
   if (!viewer || !castleKey) return false;
   const [castleX, castleY] = castleKey.split(",").map(Number);
@@ -2137,6 +2500,9 @@ if (repairModal) {
 }
 
 function openContextForKey(key, playerIndex) {
+  if ((players[playerIndex]?.layer || WORLD_LAYER_UPPER) === WORLD_LAYER_UNDER) {
+    return;
+  }
   const [x, y] = key.split(",").map(Number);
   const castleKey = getCastleBaseKeyForPos(x, y) || key;
   const node = nodeByPos[castleKey];
@@ -3868,6 +4234,15 @@ function upgradeCastleLevel() {
 
 function updatePawn(player, index) {
   const pawn = pawns[index];
+  const viewerIndex = getViewerWorldPlayerIndex();
+  const visibleLayer = getVisibleWorldLayer();
+  const playerLayer = player.layer || WORLD_LAYER_UPPER;
+  const shouldShow =
+    visibleLayer === WORLD_LAYER_UPPER
+      ? playerLayer === WORLD_LAYER_UPPER
+      : index === viewerIndex && playerLayer === WORLD_LAYER_UNDER;
+  pawn.style.display = shouldShow ? "block" : "none";
+  if (!shouldShow) return;
   const pawnSize = Math.max(40, Math.round(cellSize * 1.12));
   pawn.style.width = pawnSize + "px";
   pawn.style.height = pawnSize + "px";
@@ -4047,6 +4422,7 @@ function completeTurnAdvance() {
   handleRainbowTimers();
   handleRainbowSpawns();
   handleMasterCell();
+  handleWormholeSpawns();
   if (typeof handleTrollsTurn === "function") {
     handleTrollsTurn();
   }
@@ -4062,6 +4438,7 @@ function completeTurnAdvance() {
   }
   extraTurnReason = null;
 
+  refreshVisibleWorld();
   updateTurnUI();
   players.forEach((_, idx) => updatePlayerResources(idx));
   scheduleAutoRoll();
@@ -4143,6 +4520,34 @@ function showReachable() {
   if (movesRemaining <= 0) return;
   const revealCells = shouldRevealReachableCells();
   const currentPlayer = players[currentPlayerIndex];
+  if ((currentPlayer?.layer || WORLD_LAYER_UPPER) === WORLD_LAYER_UNDER) {
+    const queue = [{x: currentPlayer.x, y: currentPlayer.y, steps: 0}];
+    const visited = new Set([`${currentPlayer.x},${currentPlayer.y}`]);
+    while (queue.length) {
+      const {x, y, steps} = queue.shift();
+      const key = `${x},${y}`;
+      if (steps > 0) {
+        const cell = grid[key];
+        if (cell) {
+          reachableKeys.add(key);
+          if (revealCells) {
+            cell.classList.add("reachable");
+          }
+        }
+      }
+      if (steps === movesRemaining) continue;
+      for (const {dx, dy} of MOVES_DIRS) {
+        const nx = x + dx;
+        const ny = y + dy;
+        if (nx < 0 || nx >= COLS || ny < 0 || ny >= ROWS) continue;
+        const nkey = `${nx},${ny}`;
+        if (visited.has(nkey)) continue;
+        visited.add(nkey);
+        queue.push({x: nx, y: ny, steps: steps + 1});
+      }
+    }
+    return;
+  }
   const queue = [{x: currentPlayer.x, y: currentPlayer.y, steps: 0}];
   const visited = new Set([`${currentPlayer.x},${currentPlayer.y}`]);
 
@@ -4186,6 +4591,32 @@ function finalizeMove(gridX, gridY) {
   movesRemaining = 0;
   clearReachable();
   updatePawns();
+
+  if ((currentPlayer.layer || WORLD_LAYER_UPPER) === WORLD_LAYER_UNDER) {
+    const underworldState = getPlayerUnderworldState(currentPlayerIndex);
+    const underworldResource = underworldState?.resourcesByPos?.[key];
+    if (underworldResource) {
+      const typeKey = underworldResource.typeKey;
+      let amount = 0;
+      if (typeKey === "gold") {
+        amount = Math.floor(Math.random() * (400 - 200 + 1)) + 200;
+      } else if (typeKey === "resources") {
+        amount = Math.floor(Math.random() * (30 - 20 + 1)) + 20;
+      }
+      currentPlayer.pocket[typeKey] += amount;
+      delete underworldState.resourcesByPos[key];
+      updatePlayerResources(currentPlayerIndex);
+      const label = typeKey === "gold" ? "золота" : "ресурсов";
+      showPrivatePickupToastForPlayer(currentPlayerIndex, `В карман: +${amount} ${label}`);
+    }
+    if (underworldState?.stairs?.key === key) {
+      exitUnderworld(currentPlayerIndex);
+    } else {
+      refreshVisibleWorld();
+    }
+    endTurn();
+    return;
+  }
 
   const triggeredTrap = trapStunFields.find(field => field.ownerIndex !== currentPlayerIndex && field.keys.includes(key));
   if (triggeredTrap) {
@@ -4316,6 +4747,11 @@ function finalizeMove(gridX, gridY) {
       endTurn();
       return;
     }
+  }
+  if (upperWormhole && upperWormhole.key === key) {
+    enterUnderworld(currentPlayerIndex);
+    endTurn();
+    return;
   }
   if (specialEntry && specialEntry.type === "troll-cave") {
     const trollInCave = typeof isTrollInCaveAtKey === "function" && isTrollInCaveAtKey(key);
@@ -4619,6 +5055,8 @@ function resetGameState() {
   players.forEach((player, index) => {
     player.x = startX;
     player.y = startY;
+    player.layer = WORLD_LAYER_UPPER;
+    player.underworldState = null;
     player.resources.gold = 0;
     player.resources.army = 0;
     player.resources.influence = 0;
@@ -4769,6 +5207,7 @@ function resetGameState() {
   if (typeof initCloverSpawns === "function") initCloverSpawns();
   if (typeof initRainbowSpawns === "function") initRainbowSpawns();
   if (typeof initPortalState === "function") initPortalState();
+  initWormholeSpawns();
 
   if (typeof mageSlot !== "undefined") {
     mageSlot.active = false;
@@ -4795,7 +5234,7 @@ function resetGameState() {
     gameTimerDisplay.textContent = `${GAME_TIMER_LABEL}: ${formatTime(gameTimerSeconds)}`;
   }
 
-  updatePawns();
+  refreshVisibleWorld();
   players.forEach((_, index) => {
     recalcPlayerResourceIncome(index);
     updatePlayerResources(index);
@@ -4852,7 +5291,9 @@ function relayout() {
 }
 
 applyCellSize(BASE_CELL);
+initWormholeSpawns();
 relayout();
+refreshVisibleWorld();
 updateTurnUI();
 window.addEventListener("resize", relayout);
 scheduleAutoRoll();

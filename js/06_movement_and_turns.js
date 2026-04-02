@@ -23,6 +23,17 @@ game.addEventListener("click", e => {
 
   const key = `${gridX},${gridY}`;
   const currentPlayer = players[currentPlayerIndex];
+  if ((currentPlayer.layer || WORLD_LAYER_UPPER) === WORLD_LAYER_UNDER) {
+    if (gridX === currentPlayer.x && gridY === currentPlayer.y) {
+      return;
+    }
+    if (movesRemaining <= 0) {
+      return;
+    }
+    if (!reachableKeys.has(key)) return;
+    finalizeMove(gridX, gridY);
+    return;
+  }
   if (gridX === currentPlayer.x && gridY === currentPlayer.y) {
     openContextForKey(key, currentPlayerIndex);
     return;
@@ -96,7 +107,10 @@ game.addEventListener("click", e => {
   }
 
   const defenderIndex = players.findIndex((player, index) => {
-    return index !== currentPlayerIndex && player.x === gridX && player.y === gridY;
+    return index !== currentPlayerIndex &&
+      (player.layer || WORLD_LAYER_UPPER) === (currentPlayer.layer || WORLD_LAYER_UPPER) &&
+      player.x === gridX &&
+      player.y === gridY;
   });
 
   if (defenderIndex !== -1) {
