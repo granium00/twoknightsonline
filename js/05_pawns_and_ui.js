@@ -1008,6 +1008,9 @@ let pendingMagePlayerIndex = null;
 let pendingStoneKey = null;
 let pendingStonePlayerIndex = null;
 let pendingMasterPlayerIndex = null;
+const cellHoverTooltip = document.createElement("div");
+cellHoverTooltip.className = "cell-hover-tooltip";
+document.body.appendChild(cellHoverTooltip);
 
 function getMageActionCost(action) {
   if (action === "slow") return MAGE_SLOW_COST;
@@ -1059,6 +1062,165 @@ function updateMageActionButtons(playerIndex) {
 function getOpponentIndex(playerIndex) {
   return (playerIndex + 1) % players.length;
 }
+
+function hideCellHoverTooltip() {
+  cellHoverTooltip.classList.remove("is-visible");
+}
+
+function getHoverInfoPlayer() {
+  if (typeof getViewerWorldPlayerIndex === "function") {
+    return players[getViewerWorldPlayerIndex()] || players[0] || null;
+  }
+  return players[typeof currentPlayerIndex === "number" ? currentPlayerIndex : 0] || null;
+}
+
+function getCellHoverTooltipData(key) {
+  const player = getHoverInfoPlayer();
+  if (typeof MASTER_CELL !== "undefined" && typeof masterActive !== "undefined" && masterActive && key === MASTER_CELL.key) {
+    return {
+      title: "Великий мастер",
+      lines: [
+        "Рукоять меча героя — 800 ресурсов",
+        "1500 золота — 800 ресурсов",
+        "Жетон — 1500 золота",
+        "1000 золота — радужный камень",
+        "Кольцо ужаса — кольцо убеждения"
+      ]
+    };
+  }
+
+  const mageSlot = typeof getMageSlotByKey === "function" ? getMageSlotByKey(key) : null;
+  if (mageSlot && mageSlot.active) {
+    const slowCost = getDiscountedGoldCost(player, MAGE_SLOW_COST);
+    const noDoubleCost = getDiscountedGoldCost(player, MAGE_NO_DOUBLE_COST);
+    const poisonCost = getDiscountedGoldCost(player, MAGE_POISON_COST);
+    return {
+      title: "Маг",
+      lines: [
+        `Замедление врага на ${MAGE_SLOW_DURATION} ходов — ${slowCost} золота`,
+        `Отмена дубля на ${MAGE_NO_DOUBLE_DURATION} ходов — ${noDoubleCost} золота`,
+        `Яд — ${poisonCost} золота + таинственный цветок`,
+        "300 влияния — таинственный цветок",
+        "1000 золота — таинственный цветок",
+        "Зелье удачи — клевер"
+      ]
+    };
+  }
+
+  const node = nodeByPos[key];
+  if (!node) return null;
+
+  if (node.id === 2) {
+    return {
+      title: "Казарма",
+      lines: [
+        `50 войск — ${getDiscountedGoldCost(player, 2000)} золота`,
+        `130 войск — ${getDiscountedGoldCost(player, 4000)} золота`,
+        "300 влияния — 100 войск"
+      ]
+    };
+  }
+
+  if (node.id === 9) {
+    return {
+      title: "Лавка",
+      lines: [
+        "300 влияния — 1000 ресурсов",
+        `Сапоги — ${getDiscountedGoldCost(player, 500)} золота + радужный камень`,
+        `Зелье невидимости — ${getDiscountedGoldCost(player, 250)} золота`,
+        `Зелье удачи — ${getDiscountedGoldCost(player, 250)} золота`
+      ]
+    };
+  }
+
+  if (node.id === 19) {
+    return {
+      title: "Мастерская",
+      lines: [
+        `Доспехи (+7 атаки) — ${getDiscountedGoldCost(player, 1500)} золота`,
+        `Меч (+12 атаки) — ${getDiscountedGoldCost(player, 2500)} золота`,
+        `Меч героя — ${getDiscountedGoldCost(player, 5000)} золота + радужный камень + рукоять`,
+        "300 влияния — радужный камень"
+      ]
+    };
+  }
+
+  if (node.id === 15) {
+    return {
+      title: "Король",
+      lines: [
+        "1500 золота — 5 лагерей варваров",
+        "3000 золота — 10 лагерей варваров",
+        "5000 золота — 20 лагерей варваров",
+        `100 влияния — ${getDiscountedGoldCost(player, 1000)} золота`,
+        `300 влияния — ${getDiscountedGoldCost(player, 2500)} золота`,
+        `Яд по королю — от ${POISON_INFLUENCE_THRESHOLD} влияния`
+      ]
+    };
+  }
+
+  if (node.id === 6) {
+    return {
+      title: "Наемники",
+      lines: [
+        `Атака лесопилки — ${getDiscountedGoldCost(player, 500)} золота`,
+        `Атака шахты — ${getDiscountedGoldCost(player, 750)} золота`,
+        `Атака глиняного карьера — ${getDiscountedGoldCost(player, 1200)} золота`,
+        "Вор — 1 жетон",
+        `Головорезы — ${getDiscountedGoldCost(player, CUTTHROAT_COST)} золота`
+      ]
+    };
+  }
+
+  return null;
+}
+
+function renderCellHoverTooltip(data) {
+  if (!data) {
+    cellHoverTooltip.innerHTML = "";
+    return;
+  }
+  const linesHtml = data.lines
+    .map(line => `<div class="cell-hover-tooltip-line">${line}</div>`)
+    .join("");
+  cellHoverTooltip.innerHTML = `<div class="cell-hover-tooltip-title">${data.title}</div>${linesHtml}`;
+}
+
+function positionCellHoverTooltip(clientX, clientY) {
+  const offset = 14;
+  const margin = 8;
+  const width = cellHoverTooltip.offsetWidth;
+  const height = cellHoverTooltip.offsetHeight;
+  const left = Math.min(clientX + offset, window.innerWidth - width - margin);
+  const top = Math.min(clientY + offset, window.innerHeight - height - margin);
+  cellHoverTooltip.style.left = `${Math.max(margin, left)}px`;
+  cellHoverTooltip.style.top = `${Math.max(margin, top)}px`;
+}
+
+function handleGameHoverInfo(event) {
+  const cell = event.target.closest(".cell");
+  if (!cell || !game.contains(cell)) {
+    hideCellHoverTooltip();
+    return;
+  }
+  const key = cell.dataset.key;
+  if (!key) {
+    hideCellHoverTooltip();
+    return;
+  }
+  const tooltipData = getCellHoverTooltipData(key);
+  if (!tooltipData) {
+    hideCellHoverTooltip();
+    return;
+  }
+  renderCellHoverTooltip(tooltipData);
+  cellHoverTooltip.classList.add("is-visible");
+  positionCellHoverTooltip(event.clientX, event.clientY);
+}
+
+game.addEventListener("mousemove", handleGameHoverInfo);
+game.addEventListener("mouseleave", hideCellHoverTooltip);
+game.addEventListener("mousedown", hideCellHoverTooltip);
 
 function openMageModal(slot, playerIndex) {
   if (!mageModal || !slot) return;

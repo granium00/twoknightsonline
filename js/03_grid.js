@@ -147,6 +147,7 @@ for (let y = 0; y < ROWS; y++) {
     cell.appendChild(coordLabel);
 
     const key = `${x},${y}`;
+    cell.dataset.key = key;
     if (blockedCellKeys.has(key)) {
       cell.classList.add("blocked");
     }
