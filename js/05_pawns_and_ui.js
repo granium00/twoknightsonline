@@ -1565,14 +1565,19 @@ function syncLavkaModalState(playerIndex) {
   if (!player) return;
   const gold = getTotalGold(player);
   const costPotion = getDiscountedGoldCost(player, 250);
-  const costBoots = getDiscountedGoldCost(player, 1000);
+  const costBoots = getDiscountedGoldCost(player, 500);
   lavkaButtons.forEach(btn => {
     const type = btn.getAttribute("data-lavka-buy");
     if (type === "res-1000-infl") btn.disabled = getTotalResources(player) < 1000;
-    if (type === "boots") btn.disabled = gold < costBoots;
+    if (type === "boots") btn.disabled = gold < costBoots || (player.rainbowStoneCount || 0) <= 0;
     if (type === "potion-invis") btn.disabled = gold < costPotion;
     if (type === "potion-luck") btn.disabled = gold < costPotion;
-    if (type === "boots") setTradePrice(btn, goldPriceHtml(costBoots));
+    if (type === "boots") {
+      setTradePrice(
+        btn,
+        `${goldPriceHtml(costBoots)} + <img class="price-icon" src="assets/icons/rainbow_stone.png" alt="Радужный камень" />Радужный камень`
+      );
+    }
     if (type === "potion-invis") setTradePrice(btn, goldPriceHtml(costPotion));
     if (type === "potion-luck") setTradePrice(btn, goldPriceHtml(costPotion));
   });
@@ -1619,12 +1624,14 @@ lavkaButtons.forEach(btn => {
       flashPrice(btn, 1000, "assets/icons/icon-resources.png", "Ресурсы");
     }
     if (type === "boots") {
-      const cost = getDiscountedGoldCost(player, 1000);
-      if (getTotalGold(player) < cost) return;
+      const cost = getDiscountedGoldCost(player, 500);
+      if (getTotalGold(player) < cost || (player.rainbowStoneCount || 0) <= 0) return;
       spendGold(player, cost);
+      player.rainbowStoneCount -= 1;
       player.bootsCount = (player.bootsCount || 0) + 1;
       showPickupToast("Сапоги добавлены в инвентарь.");
       flashPrice(btn, cost, "assets/icons/icon-gold.png", "Золото");
+      flashPrice(btn, 1, "assets/icons/rainbow_stone.png", "Радужный камень");
     }
     if (type === "potion-invis") {
       const cost = getDiscountedGoldCost(player, 250);
@@ -3974,8 +3981,20 @@ function completeTurnAdvance() {
     spawnInitialBarbarianCells();
     barbarianPhaseStarted = true;
   }
-  if (barbarianPhaseStarted && typeof ensureBarbarianCellsCount === "function") {
-    ensureBarbarianCellsCount();
+  if (
+    barbarianPhaseStarted &&
+    typeof getBarbarianCellLimit === "function" &&
+    typeof spawnBarbarianCell === "function"
+  ) {
+    const totalTrackedBarbarians =
+      (Array.isArray(barbarianCells) ? barbarianCells.length : 0) +
+      (Array.isArray(barbarianRespawnTimers) ? barbarianRespawnTimers.length : 0);
+    if (
+      turnCounter >= BARBARIAN_LATE_GAME_TURN &&
+      totalTrackedBarbarians < getBarbarianCellLimit()
+    ) {
+      spawnBarbarianCell();
+    }
   }
   handleBarbarianRespawns();
   advanceMercenaries();
