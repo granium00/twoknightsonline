@@ -251,7 +251,10 @@ function createUnderworldStateForPlayer(playerIndex) {
       const key = `${x},${y}`;
       if (reserved.has(key)) continue;
       resourceAvailable.push(key);
-      if (!blockedCellKeys.has(key)) {
+      if (
+        !blockedCellKeys.has(key) &&
+        (typeof isSpawnBlocked !== "function" || !isSpawnBlocked(x, y))
+      ) {
         stairsAvailable.push(key);
       }
     }
