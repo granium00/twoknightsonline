@@ -895,25 +895,19 @@ function getManhattanDistance(keyA, keyB) {
 }
 
 function pickResourceSpawnKeys(emptyKeys, requiredCount, minDistance) {
-  let bestKeys = [];
-  for (let attempt = 0; attempt < 200; attempt++) {
-    const shuffledKeys = emptyKeys.slice().sort(() => Math.random() - 0.5);
-    const pickedKeys = [];
-    for (const candidateKey of shuffledKeys) {
-      const farEnough = pickedKeys.every(existingKey =>
-        getManhattanDistance(existingKey, candidateKey) >= minDistance
-      );
-      if (!farEnough) continue;
-      pickedKeys.push(candidateKey);
-      if (pickedKeys.length >= requiredCount) {
-        return pickedKeys;
+  const availableKeys = emptyKeys.slice();
+  const pickedKeys = [];
+  while (availableKeys.length && pickedKeys.length < requiredCount) {
+    const pickIndex = Math.floor(Math.random() * availableKeys.length);
+    const pickedKey = availableKeys.splice(pickIndex, 1)[0];
+    pickedKeys.push(pickedKey);
+    for (let i = availableKeys.length - 1; i >= 0; i--) {
+      if (getManhattanDistance(pickedKey, availableKeys[i]) < minDistance) {
+        availableKeys.splice(i, 1);
       }
     }
-    if (pickedKeys.length > bestKeys.length) {
-      bestKeys = pickedKeys;
-    }
   }
-  return bestKeys;
+  return pickedKeys;
 }
 
 function spawnResources() {
@@ -973,7 +967,7 @@ function spawnResources() {
     } else {
       cell.textContent = type.label;
     }
-    resourceByPos[key] = {type, x, y};
+    resourceByPos[key] = {type, x, y, key};
   }
   turnsUntilResources = RESOURCE_INTERVAL;
   updateStatusPanel();
