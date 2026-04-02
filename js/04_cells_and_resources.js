@@ -278,6 +278,7 @@ const PORTAL_COOLDOWN_MIN = 28;
 const PORTAL_COOLDOWN_MAX = 42;
 const PORTAL_MIN_DURATION = 25;
 const PORTAL_MAX_DURATION = 35;
+const PORTAL_MIN_DISTANCE = 18;
 const PORTAL_LABEL = "";
 const PORTAL_ICON = { file: "portal.png", alt: "Портал" };
 let portalState = null;
@@ -1242,10 +1243,22 @@ function spawnPortalPair() {
   if (!portalState || portalState.active) return false;
   const eligibleKeys = getPortalEligibleKeys();
   if (eligibleKeys.length < 2) return false;
-  const firstIndex = Math.floor(Math.random() * eligibleKeys.length);
-  const firstKey = eligibleKeys.splice(firstIndex, 1)[0];
-  const secondIndex = Math.floor(Math.random() * eligibleKeys.length);
-  const secondKey = eligibleKeys[secondIndex];
+  const shuffledKeys = eligibleKeys.slice().sort(() => Math.random() - 0.5);
+  let firstKey = null;
+  let secondKey = null;
+  for (const candidateFirstKey of shuffledKeys) {
+    const [x1, y1] = candidateFirstKey.split(",").map(Number);
+    const distantKeys = eligibleKeys.filter(candidateSecondKey => {
+      if (candidateSecondKey === candidateFirstKey) return false;
+      const [x2, y2] = candidateSecondKey.split(",").map(Number);
+      return Math.abs(x1 - x2) + Math.abs(y1 - y2) >= PORTAL_MIN_DISTANCE;
+    });
+    if (!distantKeys.length) continue;
+    firstKey = candidateFirstKey;
+    secondKey = distantKeys[Math.floor(Math.random() * distantKeys.length)];
+    break;
+  }
+  if (!firstKey || !secondKey) return false;
   const [x1, y1] = firstKey.split(",").map(Number);
   const [x2, y2] = secondKey.split(",").map(Number);
   const placedFirst = setSpecialCell(x1, y1, PORTAL_LABEL, "portal", null, null, null, { type: "portal" });
