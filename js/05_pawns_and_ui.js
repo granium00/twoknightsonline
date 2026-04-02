@@ -498,7 +498,9 @@ function refreshVisibleWorld() {
     renderUpperWorldView();
   }
   clearReachable();
-  if (movesRemaining > 0) {
+  if (ballistaModePlayerIndex === currentPlayerIndex) {
+    showBallistaRange(ballistaModePlayerIndex);
+  } else if (movesRemaining > 0) {
     showReachable();
   }
   updatePawns();
