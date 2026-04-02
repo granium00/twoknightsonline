@@ -198,7 +198,6 @@ importantNodes.forEach(node => {
 
 const RESOURCE_INTERVAL = 6;
 const RESOURCE_MIN_DISTANCE = 15;
-const RESOURCE_FALLBACK_MIN_DISTANCE = 1;
 const RESOURCE_SPAWN_ATTEMPTS = 600;
 const resourceTypes = [
   {key: "gold", label: "З", min: 200, max: 400},
@@ -896,28 +895,21 @@ function getManhattanDistance(keyA, keyB) {
 }
 
 function pickResourceSpawnKeys(emptyKeys, requiredCount, minDistance) {
-  let bestKeys = [];
   for (let attempt = 0; attempt < RESOURCE_SPAWN_ATTEMPTS; attempt++) {
-    const availableKeys = emptyKeys.slice();
+    const availableKeys = emptyKeys.slice().sort(() => Math.random() - 0.5);
     const pickedKeys = [];
-    while (availableKeys.length && pickedKeys.length < requiredCount) {
-      const pickIndex = Math.floor(Math.random() * availableKeys.length);
-      const pickedKey = availableKeys.splice(pickIndex, 1)[0];
-      pickedKeys.push(pickedKey);
-      for (let i = availableKeys.length - 1; i >= 0; i--) {
-        if (getManhattanDistance(pickedKey, availableKeys[i]) < minDistance) {
-          availableKeys.splice(i, 1);
-        }
+    for (const candidateKey of availableKeys) {
+      const fits = pickedKeys.every(existingKey =>
+        getManhattanDistance(existingKey, candidateKey) >= minDistance
+      );
+      if (!fits) continue;
+      pickedKeys.push(candidateKey);
+      if (pickedKeys.length >= requiredCount) {
+        return pickedKeys;
       }
     }
-    if (pickedKeys.length >= requiredCount) {
-      return pickedKeys;
-    }
-    if (pickedKeys.length > bestKeys.length) {
-      bestKeys = pickedKeys;
-    }
   }
-  return bestKeys;
+  return [];
 }
 
 function spawnResources() {
@@ -951,13 +943,7 @@ function spawnResources() {
       typesToSpawn.push(armyType);
     }
   }
-  let pickedResourceKeys = [];
-  for (let distance = RESOURCE_MIN_DISTANCE; distance >= RESOURCE_FALLBACK_MIN_DISTANCE; distance--) {
-    pickedResourceKeys = pickResourceSpawnKeys(emptyKeys, typesToSpawn.length, distance);
-    if (pickedResourceKeys.length >= typesToSpawn.length) {
-      break;
-    }
-  }
+  const pickedResourceKeys = pickResourceSpawnKeys(emptyKeys, typesToSpawn.length, RESOURCE_MIN_DISTANCE);
   for (let index = 0; index < pickedResourceKeys.length; index++) {
     const key = pickedResourceKeys[index];
     const type = typesToSpawn[index];
