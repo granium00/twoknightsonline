@@ -156,7 +156,8 @@ const UNDERWORLD_REWARD_MULTIPLIER_LATE = 2.5;
 const UNDERWORLD_REWARD_LATE_TURN = 150;
 const WORMHOLE_MIN_SPAWNS = 1;
 const WORMHOLE_MAX_SPAWNS = 3;
-const WORMHOLE_MAX_SPAWN_TURN = 250;
+const WORMHOLE_MIN_SPAWN_TURN = 75;
+const WORMHOLE_MAX_SPAWN_TURN = 300;
 let wormholeSpawnTurns = [];
 let wormholeSpawnIndex = 0;
 let upperWormhole = null;
@@ -165,7 +166,7 @@ function initWormholeSpawns() {
   const picked = new Set();
   const count = randomIntRange(WORMHOLE_MIN_SPAWNS, WORMHOLE_MAX_SPAWNS);
   while (picked.size < count) {
-    picked.add(randomIntRange(1, WORMHOLE_MAX_SPAWN_TURN));
+    picked.add(randomIntRange(WORMHOLE_MIN_SPAWN_TURN, WORMHOLE_MAX_SPAWN_TURN));
   }
   wormholeSpawnTurns = Array.from(picked).sort((a, b) => a - b);
   wormholeSpawnIndex = 0;
