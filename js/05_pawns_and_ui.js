@@ -1256,7 +1256,7 @@ function getCellHoverTooltipData(key) {
       title: "Лавка",
       lines: [
         "300 влияния — 1000 ресурсов",
-        `Сапоги — ${getDiscountedGoldCost(player, 500)} золота + радужный камень`,
+        `Сапоги — ${getDiscountedGoldCost(player, 1500)} золота + радужный камень`,
         `Зелье невидимости — ${getDiscountedGoldCost(player, 250)} золота`,
         `Зелье удачи — ${getDiscountedGoldCost(player, 250)} золота`
       ]
@@ -2223,7 +2223,7 @@ function syncLavkaModalState(playerIndex) {
   if (!player) return;
   const gold = getTotalGold(player);
   const costPotion = getDiscountedGoldCost(player, 250);
-  const costBoots = getDiscountedGoldCost(player, 500);
+  const costBoots = getDiscountedGoldCost(player, 1500);
   lavkaButtons.forEach(btn => {
     const type = btn.getAttribute("data-lavka-buy");
     if (type === "res-1000-infl") btn.disabled = getTotalResources(player) < 1000;
@@ -2282,7 +2282,7 @@ lavkaButtons.forEach(btn => {
       flashPrice(btn, 1000, "assets/icons/icon-resources.png", "Ресурсы");
     }
     if (type === "boots") {
-      const cost = getDiscountedGoldCost(player, 500);
+      const cost = getDiscountedGoldCost(player, 1500);
       if (getTotalGold(player) < cost || (player.rainbowStoneCount || 0) <= 0) return;
       spendGold(player, cost);
       player.rainbowStoneCount -= 1;
