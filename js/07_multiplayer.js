@@ -1099,6 +1099,9 @@ function performPrivateUiAction(action) {
       }
       if (Number.isInteger(playerIndex)) {
         pendingGuardPlayerIndex = playerIndex;
+        if (typeof updateGuardModalButtons === "function") {
+          updateGuardModalButtons(playerIndex, Boolean(guardAccess?.[playerIndex]));
+        }
       }
       if (actionType === "gold") clickBySelector("#guardBribeBtn");
       if (actionType === "influence") clickBySelector("#guardInfluenceBtn");
