@@ -3679,6 +3679,7 @@ function resolveTrollBattle(playerIndex, trollArmy) {
     }
   }
   updatePlayerResources(playerIndex);
+  updateInventory(playerIndex);
   return {
     type: "troll",
     attackerIndex: playerIndex,
@@ -3713,6 +3714,7 @@ function rollTrollCaveLoot(playerIndex) {
     player.tokenCount = (player.tokenCount || 0) + 1;
   }
   updatePlayerResources(playerIndex);
+  updateInventory(playerIndex);
   const parts = [
     `\u0417\u043e\u043b\u043e\u0442\u043e: +${gold}`,
     `\u0420\u0435\u0441\u0443\u0440\u0441\u044b: +${resources}`,
@@ -5173,6 +5175,7 @@ function finalizeMove(gridX, gridY) {
   if (rainbowByPos[key]) {
     if (tryAddSpecialArtifactToInventory(currentPlayer, "rainbow")) {
       updatePlayerResources(currentPlayerIndex);
+      updateInventory(currentPlayerIndex);
       showLayerAwarePickupToast(currentPlayerIndex, "Радужный камень добавлен в инвентарь.");
       clearRainbowStone(key);
     } else {
@@ -5215,6 +5218,7 @@ function finalizeMove(gridX, gridY) {
   if (flowerArtifact && flowerArtifact.key === key) {
     if (tryAddSpecialArtifactToInventory(currentPlayer, "flower")) {
       updatePlayerResources(currentPlayerIndex);
+      updateInventory(currentPlayerIndex);
       showLayerAwarePickupToast(currentPlayerIndex, "Таинственный цветок добавлен в инвентарь.");
       clearFlower();
     } else {
@@ -5224,6 +5228,7 @@ function finalizeMove(gridX, gridY) {
   if (cloverArtifact && cloverArtifact.key === key) {
     currentPlayer.cloverCount = (currentPlayer.cloverCount || 0) + 1;
     updatePlayerResources(currentPlayerIndex);
+    updateInventory(currentPlayerIndex);
     showLayerAwarePickupToast(currentPlayerIndex, "Клевер добавлен в инвентарь.");
     if (typeof clearClover === "function") {
       clearClover();
