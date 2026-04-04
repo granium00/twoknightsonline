@@ -118,6 +118,7 @@ const BALLISTA_COST = 750;
 const BOLT_COST = 125;
 const TRAP_STUN_COST = 150;
 const TRAP_STUN_DURATION = 3;
+const SPECIAL_ARTIFACT_SLOT_LIMIT = 2;
 const BALLISTA_RANGE = 12;
 const BALLISTA_DAMAGE_MIN = 13;
 const BALLISTA_DAMAGE_MAX = 17;
@@ -586,6 +587,28 @@ function applyPotion(playerIndex, type) {
   }
   updatePlayerResources(playerIndex);
   updateInventory(playerIndex);
+}
+
+function getSpecialArtifactSlotUsage(player) {
+  if (!player) return 0;
+  return (player.rainbowStoneCount || 0) + (player.flowerCount || 0);
+}
+
+function hasFreeSpecialArtifactSlot(player) {
+  return getSpecialArtifactSlotUsage(player) < SPECIAL_ARTIFACT_SLOT_LIMIT;
+}
+
+function tryAddSpecialArtifactToInventory(player, type) {
+  if (!player || !hasFreeSpecialArtifactSlot(player)) return false;
+  if (type === "rainbow") {
+    player.rainbowStoneCount = (player.rainbowStoneCount || 0) + 1;
+    return true;
+  }
+  if (type === "flower") {
+    player.flowerCount = (player.flowerCount || 0) + 1;
+    return true;
+  }
+  return false;
 }
 
 function getTrapStunKeysForPlayer(playerIndex) {
@@ -3683,12 +3706,8 @@ function rollTrollCaveLoot(playerIndex) {
   player.pocket.gold += gold;
   player.pocket.resources += resources;
   player.resources.influence -= influenceLoss;
-  if (gotRainbow) {
-    player.rainbowStoneCount = (player.rainbowStoneCount || 0) + 1;
-  }
-  if (gotFlower) {
-    player.flowerCount = (player.flowerCount || 0) + 1;
-  }
+  const receivedRainbow = gotRainbow && tryAddSpecialArtifactToInventory(player, "rainbow");
+  const receivedFlower = gotFlower && tryAddSpecialArtifactToInventory(player, "flower");
   if (gotToken) {
     player.tokenCount = (player.tokenCount || 0) + 1;
   }
@@ -3698,8 +3717,10 @@ function rollTrollCaveLoot(playerIndex) {
     `\u0420\u0435\u0441\u0443\u0440\u0441\u044b: +${resources}`,
     `\u0412\u043b\u0438\u044f\u043d\u0438\u0435: -${influenceLoss}`
   ];
-  if (gotRainbow) parts.push("\u0420\u0430\u0434\u0443\u0436\u043d\u044b\u0439 \u043a\u0430\u043c\u0435\u043d\u044c: \u043d\u0430\u0439\u0434\u0435\u043d");
-  if (gotFlower) parts.push("\u0422\u0430\u0438\u043d\u0441\u0442\u0432\u0435\u043d\u043d\u044b\u0439 \u0446\u0432\u0435\u0442\u043e\u043a: \u043d\u0430\u0439\u0434\u0435\u043d");
+  if (receivedRainbow) parts.push("\u0420\u0430\u0434\u0443\u0436\u043d\u044b\u0439 \u043a\u0430\u043c\u0435\u043d\u044c: \u043d\u0430\u0439\u0434\u0435\u043d");
+  if (gotRainbow && !receivedRainbow) parts.push("\u0420\u0430\u0434\u0443\u0436\u043d\u044b\u0439 \u043a\u0430\u043c\u0435\u043d\u044c: \u043d\u0435 \u043f\u043e\u043c\u0435\u0441\u0442\u0438\u043b\u0441\u044f, \u0441\u043b\u043e\u0442\u044b \u0437\u0430\u043d\u044f\u0442\u044b");
+  if (receivedFlower) parts.push("\u0422\u0430\u0438\u043d\u0441\u0442\u0432\u0435\u043d\u043d\u044b\u0439 \u0446\u0432\u0435\u0442\u043e\u043a: \u043d\u0430\u0439\u0434\u0435\u043d");
+  if (gotFlower && !receivedFlower) parts.push("\u0422\u0430\u0438\u043d\u0441\u0442\u0432\u0435\u043d\u043d\u044b\u0439 \u0446\u0432\u0435\u0442\u043e\u043a: \u043d\u0435 \u043f\u043e\u043c\u0435\u0441\u0442\u0438\u043b\u0441\u044f, \u0441\u043b\u043e\u0442\u044b \u0437\u0430\u043d\u044f\u0442\u044b");
   if (gotToken) parts.push("\u0416\u0435\u0442\u043e\u043d: \u043d\u0430\u0439\u0434\u0435\u043d");
   return parts.join(". ");
 }
@@ -5148,10 +5169,13 @@ function finalizeMove(gridX, gridY) {
     openStoneModal(key, currentPlayerIndex);
   }
   if (rainbowByPos[key]) {
-    currentPlayer.rainbowStoneCount = (currentPlayer.rainbowStoneCount || 0) + 1;
-    updatePlayerResources(currentPlayerIndex);
-    showLayerAwarePickupToast(currentPlayerIndex, "Радужный камень добавлен в инвентарь.");
-    clearRainbowStone(key);
+    if (tryAddSpecialArtifactToInventory(currentPlayer, "rainbow")) {
+      updatePlayerResources(currentPlayerIndex);
+      showLayerAwarePickupToast(currentPlayerIndex, "Радужный камень добавлен в инвентарь.");
+      clearRainbowStone(key);
+    } else {
+      showLayerAwarePickupToast(currentPlayerIndex, "Нет свободного слота для радужного камня.");
+    }
   }
   if (masterActive && key === MASTER_CELL.key) {
     openMasterModal(currentPlayerIndex);
@@ -5187,10 +5211,13 @@ function finalizeMove(gridX, gridY) {
     clearTreasure();
   }
   if (flowerArtifact && flowerArtifact.key === key) {
-    currentPlayer.flowerCount = (currentPlayer.flowerCount || 0) + 1;
-    updatePlayerResources(currentPlayerIndex);
-    showLayerAwarePickupToast(currentPlayerIndex, "Таинственный цветок добавлен в инвентарь.");
-    clearFlower();
+    if (tryAddSpecialArtifactToInventory(currentPlayer, "flower")) {
+      updatePlayerResources(currentPlayerIndex);
+      showLayerAwarePickupToast(currentPlayerIndex, "Таинственный цветок добавлен в инвентарь.");
+      clearFlower();
+    } else {
+      showLayerAwarePickupToast(currentPlayerIndex, "Нет свободного слота для таинственного цветка.");
+    }
   }
   if (cloverArtifact && cloverArtifact.key === key) {
     currentPlayer.cloverCount = (currentPlayer.cloverCount || 0) + 1;
