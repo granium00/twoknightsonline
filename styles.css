@@ -826,6 +826,16 @@
       font-size: 1.6rem;
       letter-spacing: 0.03em;
     }
+    #gameOverClose {
+      margin-top: 18px;
+      padding: 10px 18px;
+      border-radius: 10px;
+      border: 1px solid #2a3b55;
+      background: #1f3350;
+      color: #f1f5f9;
+      font-weight: bold;
+      cursor: pointer;
+    }
     #worldDangerModal {
       position: fixed;
       inset: 0;

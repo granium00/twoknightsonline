@@ -1980,6 +1980,10 @@ function showGameOver(winnerIndex) {
   if (gameOverModal) gameOverModal.style.display = "flex";
 }
 
+function hideGameOver() {
+  if (gameOverModal) gameOverModal.style.display = "none";
+}
+
 function getCastleBaseKeyForPos(x, y) {
   const castles = importantNodes.filter(node => node.type === "castle");
   for (const castle of castles) {
@@ -4186,6 +4190,17 @@ function showBattleModal(result, force = false) {
       hideBattleModal();
     }
   });
+
+if (gameOverClose) {
+  gameOverClose.addEventListener("click", hideGameOver);
+}
+if (gameOverModal) {
+  gameOverModal.addEventListener("click", (event) => {
+    if (event.target === gameOverModal) {
+      hideGameOver();
+    }
+  });
+}
 
 function refreshCastleModal(key, playerIndex) {
   if (!castleModal) return;

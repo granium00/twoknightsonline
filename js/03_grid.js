@@ -40,6 +40,7 @@ const repairCancel = document.getElementById("repairCancel");
 const repairText = document.getElementById("repairText");
 const gameOverModal = document.getElementById("gameOverModal");
 const gameOverText = document.getElementById("gameOverText");
+const gameOverClose = document.getElementById("gameOverClose");
 const cityModal = document.getElementById("cityModal");
 const cityClose = document.getElementById("cityClose");
 const cityRewardButtons = Array.from(document.querySelectorAll("[data-city-reward]"));
