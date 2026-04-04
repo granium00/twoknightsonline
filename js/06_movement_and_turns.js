@@ -135,6 +135,13 @@ game.addEventListener("click", e => {
       castleOwnersByKey[castleKey] === defenderIndex;
     const battleResult = resolveBattle(currentPlayerIndex, defenderIndex, { noSteal: defenderOwnsCastle });
     const attackerWon = battleResult && battleResult.winnerIndex === currentPlayerIndex;
+    if (attackerWon) {
+      // Soft guard against rare desyncs: place the attacker onto the defeated target cell
+      // before running the normal post-move pipeline.
+      currentPlayer.x = gridX;
+      currentPlayer.y = gridY;
+      updatePawns();
+    }
     if (defenderOwnsCastle && attackerWon) {
       showPickupToast("Победа над игроком. Начинается штурм замка.");
       finalizeMove(gridX, gridY);
