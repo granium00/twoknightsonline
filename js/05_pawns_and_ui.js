@@ -1973,6 +1973,7 @@ let gameEnded = false;
 
 function showGameOver(winnerIndex) {
   gameEnded = true;
+  gameWinnerIndex = typeof winnerIndex === "number" ? winnerIndex : null;
   if (rollBtn) rollBtn.disabled = true;
   const winnerLabel = typeof winnerIndex === "number" ? `Победил Игрок ${winnerIndex + 1}` : "Игра окончена";
   if (gameOverText) gameOverText.textContent = winnerLabel;
@@ -4642,6 +4643,7 @@ let audioUnlocked = false;
 let testModeEnabled = false;
 let lastBattleResult = null;
 let lastBattleId = 0;
+let gameWinnerIndex = null;
 let pendingTurnAdvance = false;
 let pendingTurnManualOnly = false;
 
@@ -5417,6 +5419,7 @@ if (endTurnBtn) {
 }
 function resetGameState() {
   gameEnded = false;
+  gameWinnerIndex = null;
   worldDangerShown = false;
   robberEvent = null;
   robberAmbushThisSession = false;

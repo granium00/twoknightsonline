@@ -351,6 +351,7 @@ function buildState() {
     cutthroatIdCounter,
     trapStunFields: shallowClone(trapStunFields),
     trapStunIdCounter,
+    gameWinnerIndex,
     upperWormhole: shallowClone(upperWormhole),
     wormholeSpawnTurns: shallowClone(wormholeSpawnTurns),
     wormholeSpawnIndex,
@@ -627,6 +628,7 @@ function applyState(state) {
   barbarianPhaseStarted = state.barbarianPhaseStarted ?? barbarianPhaseStarted;
   robberEvent = state.robberEvent ?? robberEvent;
   gameEnded = state.gameEnded ?? gameEnded;
+  gameWinnerIndex = Number.isInteger(state.gameWinnerIndex) ? state.gameWinnerIndex : null;
   gameTimerSeconds = state.gameTimerSeconds ?? gameTimerSeconds;
   const incomingBattleId = state.lastBattleId ?? lastBattleId;
   const incomingBattleResult = state.lastBattleResult ?? lastBattleResult;
@@ -775,6 +777,9 @@ function applyState(state) {
   }
   if (typeof refreshVisibleWorld === "function") {
     refreshVisibleWorld();
+  }
+  if (gameEnded && typeof showGameOver === "function") {
+    showGameOver(gameWinnerIndex);
   }
   updateTurnUI();
   updateStatusPanel();
